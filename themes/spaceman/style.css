@@ -165,7 +165,7 @@ html {
 #results-page::before,
 #main-home {
   background-image:
-    url(https://searxng.welshjavelin.net/static/themes/spaceman/sxng-stardust.png),
+    url("images/stardust.png"),
     radial-gradient(
       farthest-corner ellipse at -65% -20% in oklch,
       transparent 0%,
