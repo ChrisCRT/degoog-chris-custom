@@ -3,5 +3,7 @@
   "author": "ChrisCRT",
   "description": "A theme",
   "css": "style.css",
-  "templates": {}
+  "templates": {
+    "search-header": "search-templates/header.html"
+  }
 }

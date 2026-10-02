@@ -31,6 +31,11 @@ html {
   .result-favicon:not([class~="degoog-result--favicon"]) {
     border-radius: 0.25rem;
     background-color: var(--sx-chip-alt);
+    aspect-ratio: 1;
+    --fa-display: block;
+    --fa-width: 1.625rem;
+    font-size: 1.125rem;
+    padding: 0.25rem;
   }
   .degoog-result--cite,
   .result-cite:not([class~="degoog-result--cite"]) {
@@ -186,4 +191,11 @@ html {
 .degoog-result--engines,
 .result-engines:not([class~="degoog-result--engines"]) {
   gap: 0.25rem;
+}
+
+.cached-link {
+  display: inline-block;
+  font-size: 0.6875rem;
+  padding: 2px 0.25rem;
+  border: 1px solid transparent;
 }
