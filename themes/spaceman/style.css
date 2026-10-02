@@ -199,3 +199,23 @@ html {
   padding: 2px 0.25rem;
   border: 1px solid transparent;
 }
+
+@media (max-width: 767px) {
+  #results-tabs {
+    padding-inline-end: 0;
+  }
+  .tools-wrap {
+    inset-inline-end: 0;
+    position: sticky;
+    z-index: 1;
+    backdrop-filter: blur(3px);
+    background: transparent;
+  }
+}
+
+.tools-field-toggle {
+  transition: background-color 0.3s ease-in-out;
+}
+.tools-field-toggle:is(:hover, :focus-visible) {
+  background-color: var(--bg-hover);
+}
