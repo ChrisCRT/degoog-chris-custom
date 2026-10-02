@@ -4,6 +4,6 @@
   "description": "A theme",
   "css": "style.css",
   "templates": {
-    "search-header": "search-templates/header.html"
+    "search-header": "search-templates/result.html"
   }
 }
