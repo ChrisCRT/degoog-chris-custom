@@ -13,11 +13,11 @@
       </div>
     </div>
     {{/if is_video}} {{^if is_video}}
-    <div class="result-thumbnail-wrap degoog-result--thumb" role="button" tabindex="0" aria-label="Open page"
-      data-url="{{ url }}">
+    <a class="result-thumbnail-wrap degoog-result--thumb" href="{{ url }}" target="{{ link_target }}"
+      rel="{{ link_rel }}">
       <img class="result-thumbnail-img" src="{{ thumbnail_url }}" alt="" loading="lazy"
         onerror="this.parentElement.style.display = 'none'" />
-    </div>
+    </a>
     {{/if is_video}} {{/if thumbnail_url}}
     <div class="result-body degoog-result--body">
       <div class="result-url-row degoog-result--url-row">
