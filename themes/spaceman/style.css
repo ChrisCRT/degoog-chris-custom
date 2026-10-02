@@ -1,0 +1,189 @@
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(hsl(0, 0%, 95%), hsl(220, 10%, 6%));
+  --border-light: light-dark(hsl(0, 0%, 87%), hsl(225, 4%, 20%));
+  --sx-chip: hsl(213, 10%, 18%);
+  --sx-chip-alt: hsl(216, 10%, 19%);
+  --brand-blue: hsl(19, 70%, 40%);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: hsl(220, 10%, 6%);
+  --bg-light: hsl(216, 10%, 10%);
+}
+
+html {
+  .logo span,
+  .results-logo span {
+    color: var(--text-primary) !important;
+  }
+
+  .tools-toggle.active {
+    color: inherit;
+  }
+
+  .degoog-result--favicon,
+  .result-favicon:not([class~="degoog-result--favicon"]) {
+    border-radius: 0.25rem;
+    background-color: var(--sx-chip-alt);
+  }
+  .degoog-result--cite,
+  .result-cite:not([class~="degoog-result--cite"]) {
+    font-size: 0.75rem;
+  }
+  .degoog-result--title strong,
+  .result-title:not([class~="degoog-result--title"]) strong {
+    font-weight: normal;
+  }
+
+  .clrtr-card {
+    --clrtr-field-bg: var(--bg-light, Canvas);
+  }
+
+  .clrtr-card .clrtr-panel {
+    border-radius: unset !important;
+    border: unset !important;
+    padding: unset !important;
+  }
+
+  .clrtr-preview-container {
+    gap: 0.625rem;
+    border-radius: 0.5rem;
+
+    .clrtr-preview-box {
+      border-radius: 0.5rem;
+      box-shadow: none;
+    }
+  }
+
+  .clrtr-translations {
+    gap: 0;
+
+    .clrtr-row {
+      border-radius: 0;
+      margin-bottom: -1px;
+    }
+
+    .clrtr-row:first-child {
+      border-radius: 0.5rem 0.5rem 0 0;
+    }
+
+    .clrtr-row:last-child {
+      border-radius: 0 0 0.5rem 0.5rem;
+    }
+
+    .clrtr-row:hover {
+      z-index: 2;
+    }
+  }
+
+  @container (max-width: 680px) {
+    .clrtr-panel {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      padding: 1rem;
+    }
+
+    .clrtr-preview-container {
+      align-items: center;
+      max-width: 100%;
+      margin: 0 auto;
+    }
+  }
+
+  .wiki-card {
+    --font-large: 1rem;
+    --font-medium: 0.875rem;
+    --font-small: 0.6875rem;
+    --link-color: var(--text-link);
+    --border-color: var(--sx-chip-alt);
+    --radius: unset;
+
+    border: none;
+
+    .wiki-thumb {
+      border-radius: 4px;
+    }
+
+    .wiki-desc {
+      margin-block: 0.25rem 0.5rem;
+      letter-spacing: unset;
+    }
+
+    .wiki-extract {
+      line-height: 1.5;
+    }
+  }
+
+  #at-a-glance > .command-result > .command-result {
+    padding: 0;
+  }
+
+  .weather-hour-card {
+    background-color: transparent;
+    border-width: 0 1px 0 0;
+    border-radius: 0;
+  }
+  .weather-hour-card:last-child {
+    border-width: 0;
+  }
+}
+
+#results-page {
+  position: relative;
+
+  &::before {
+    content: "";
+    height: auto;
+    width: 100%;
+    position: absolute;
+    inset-block: anchor(--results-header top) anchor(--results-tabs bottom);
+    inset-inline: anchor(--results-header left) anchor(--results-tabs right);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  #results-header {
+    anchor-name: --results-header;
+  }
+
+  #results-tabs {
+    anchor-name: --results-tabs;
+
+    .tools-wrap:before {
+      background: var(--text-secondary);
+      z-index: -2;
+    }
+  }
+}
+
+#results-page::before,
+#main-home {
+  background-image:
+    url(https://searxng.welshjavelin.net/static/themes/spaceman/sxng-stardust.png),
+    radial-gradient(
+      farthest-corner ellipse at -65% -20% in oklch,
+      transparent 0%,
+      transparent 50%,
+      hsl(215, 45%, 40%) 85%,
+      hsl(19, 70%, 40%) 100%
+    );
+}
+
+.degoog-icon-btn {
+  --brand-blue: currentColor;
+}
+
+.degoog-panel--slot-title {
+  padding-block-end: 0;
+}
+
+.degoog-result--engines,
+.result-engines:not([class~="degoog-result--engines"]) {
+  gap: 0.25rem;
+}
