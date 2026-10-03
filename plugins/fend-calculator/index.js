@@ -610,10 +610,8 @@ var routes = [
     }
   }
 ];
-var src_default = { slot, command, routes };
 export {
   command,
-  src_default as default,
   plugin,
   routes,
   slot

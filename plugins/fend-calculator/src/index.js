@@ -228,5 +228,3 @@ export const routes = [
     },
   },
 ];
-
-export default { slot, command, routes };
