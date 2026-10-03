@@ -1,20 +1,22 @@
 :root {
   color-scheme: light dark;
-  --bg: light-dark(hsl(0, 0%, 95%), hsl(220, 10%, 6%));
-  --border-light: light-dark(hsl(0, 0%, 87%), hsl(225, 4%, 20%));
-  --sx-chip: hsl(213, 10%, 18%);
-  --sx-chip-alt: hsl(216, 10%, 19%);
-  --brand-blue: hsl(19, 70%, 40%);
+  --bg: light-dark(hsl(0 0% 95%), hsl(220 10% 6%));
+  --border-light: light-dark(hsl(0 0% 87%), hsl(225 4% 20%));
+  --sx-chip: hsl(213 10% 18%);
+  --sx-chip-alt: hsl(216 10% 19%);
+  --brand-blue: hsl(19 70% 40%);
 }
 
 [data-theme="light"] {
   color-scheme: light;
+  --bg: hsl(0 0% 95%);
+  --border-light: hsl(0 0% 87%);
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: hsl(220, 10%, 6%);
-  --bg-light: hsl(216, 10%, 10%);
+  --bg: hsl(220 10% 6%);
+  --bg-light: hsl(216 10% 10%);
 }
 
 html {
@@ -175,8 +177,8 @@ html {
       farthest-corner ellipse at -65% -20% in oklch,
       transparent 0%,
       transparent 50%,
-      hsl(215, 45%, 40%) 85%,
-      hsl(19, 70%, 40%) 100%
+      hsl(215 45% 40%) 85%,
+      hsl(19 70% 40%) 100%
     );
 }
 
