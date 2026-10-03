@@ -5,7 +5,7 @@
     "": {
       "name": "degoog-fend-calculator",
       "dependencies": {
-        "fend-wasm": "^1.5.8",
+        "fend-wasm-web": "^1.5.8",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -62,7 +62,7 @@
 
     "bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
 
-    "fend-wasm": ["fend-wasm@1.5.8", "", {}, "sha512-3N9+k6qZ1gSRlCwmvfmeQOy/VHj9sxGAaPML4f3vAYwsrgNuoQNaHQ0ddQ3RhtTHs3xbJlXJoDkJ2IvEay73SQ=="],
+    "fend-wasm-web": ["fend-wasm-web@1.5.8", "", {}, "sha512-wkDUr2e31P2cne3FlCq2pDqNuDBgzrgI19G+ygnCl4dSsJwIu6YyuW2dspuUrAfTi8ebY4PNp6+x1u4KJgwrkA=="],
 
     "typescript": ["typescript@7.0.2", "", { "optionalDependencies": { "@typescript/typescript-aix-ppc64": "7.0.2", "@typescript/typescript-darwin-arm64": "7.0.2", "@typescript/typescript-darwin-x64": "7.0.2", "@typescript/typescript-freebsd-arm64": "7.0.2", "@typescript/typescript-freebsd-x64": "7.0.2", "@typescript/typescript-linux-arm": "7.0.2", "@typescript/typescript-linux-arm64": "7.0.2", "@typescript/typescript-linux-loong64": "7.0.2", "@typescript/typescript-linux-mips64el": "7.0.2", "@typescript/typescript-linux-ppc64": "7.0.2", "@typescript/typescript-linux-riscv64": "7.0.2", "@typescript/typescript-linux-s390x": "7.0.2", "@typescript/typescript-linux-x64": "7.0.2", "@typescript/typescript-netbsd-arm64": "7.0.2", "@typescript/typescript-netbsd-x64": "7.0.2", "@typescript/typescript-openbsd-arm64": "7.0.2", "@typescript/typescript-openbsd-x64": "7.0.2", "@typescript/typescript-sunos-x64": "7.0.2", "@typescript/typescript-win32-arm64": "7.0.2", "@typescript/typescript-win32-x64": "7.0.2" }, "bin": { "tsc": "bin/tsc" } }, "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA=="],
 

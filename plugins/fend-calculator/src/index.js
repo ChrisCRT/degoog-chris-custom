@@ -1,3 +1,5 @@
+import * as fendModule from "fend-wasm-web";
+
 let fendInitPromise = null;
 let evalCache = null;
 let fendEnabled = true;
@@ -50,7 +52,10 @@ const CALC_KEYS_HTML = CALC_KEYS.map((row) => {
 
 const _loadFend = async () => {
   if (!fendInitPromise) {
-    fendInitPromise = import("fend-wasm");
+    fendInitPromise = (async () => {
+      if (typeof fendModule.default === "function") await fendModule.default();
+      return fendModule;
+    })();
   }
   return fendInitPromise;
 };
@@ -64,19 +69,28 @@ const _normalise = (expr) => {
 const _evaluate = async (expr, timeout = EVAL_TIMEOUT) => {
   if (!expr || expr.length > MAX_EXPR_LEN) return { ok: false, result: "" };
 
-  const cached = await evalCache.get(expr);
-  if (cached !== undefined && cached !== null) return cached;
+  try {
+    const cached = await evalCache.get(expr);
+    if (cached !== undefined && cached !== null) return cached;
 
-  const fend = await _loadFend();
-  const result = fend.evaluateFendWithTimeout(expr, timeout);
-  if (typeof result !== "string" || !result) return { ok: false, result: "" };
-  if (result.startsWith("Error:")) {
-    return { ok: false, result: "", error: result.trim() };
+    const fend = await _loadFend();
+    const result = fend.evaluateFendWithTimeout(expr, timeout);
+    if (typeof result !== "string" || !result) return { ok: false, result: "" };
+    if (result.startsWith("Error:")) {
+      return { ok: false, result: "", error: result.trim() };
+    }
+
+    const out = { ok: true, result };
+    await evalCache.set(expr, out);
+    return out;
+  } catch {
+    console.error("[fend-calculator] Fend evaluation failed:", err);
+    return {
+      ok: false,
+      result: "",
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
-
-  const out = { ok: true, result };
-  await evalCache.set(expr, out);
-  return out;
 };
 
 const _calcHtml = (expr, result) => {

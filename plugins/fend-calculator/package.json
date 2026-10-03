@@ -1,18 +1,18 @@
 {
   "name": "degoog-fend-calculator",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "fend-wasm": "^1.5.8"
-  },
-  "scripts": {
-    "build": "bun build ./src/index.js --target=bun --format=esm --packages=bundle --outdir=./dist"
-  },
   "module": "src/index.js",
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^7"
+  },
+  "private": true,
+  "scripts": {
+    "build": "bun build ./src/index.js --target=bun --format=esm --packages=bundle --outdir=./"
+  },
+  "type": "module",
+  "dependencies": {
+    "fend-wasm-web": "^1.5.8"
   }
 }
