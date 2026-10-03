@@ -75,6 +75,14 @@ export default class PlexEngine {
         "Guide to learn your token: https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/",
     },
     {
+      key: "bypassProxy",
+      label: "Bypass proxy",
+      type: "toggle",
+      default: "true",
+      description:
+        "Connect directly to the Plex Media Server instance instead of routing through the proxy. Enable this when Plex is on your local network.",
+    },
+    {
       key: "urlMode",
       label: "Open results with",
       type: "select",
@@ -84,9 +92,12 @@ export default class PlexEngine {
     },
   ];
 
+  _bypassProxy = true;
+
   configure(settings) {
     this.plexUrl = (settings.url || "").replace(/\/$/, "");
     this.apiKey = settings.apiKey || "";
+    this._bypassProxy = settings.bypassProxy !== "false";
     this.urlMode = settings.urlMode || "plex";
     this.machineId = "";
   }
@@ -157,7 +168,7 @@ export default class PlexEngine {
     url.searchParams.set("X-Plex-Token", this.apiKey);
     const authenticatedUrl = url.toString();
 
-    if (context?.signProxyUrl) {
+    if (!this._bypassProxy && context?.signProxyUrl) {
       const proxyUrl = context.signProxyUrl(authenticatedUrl);
       return proxyUrl;
     }
@@ -286,19 +297,19 @@ export default class PlexEngine {
    * @returns {Promise<object[]>}
    */
   async executeSearch(query, page = 1, _timeFilter, context) {
-    if (!this.plexUrl && !this.apiKey) return [];
+    if (!this.plexUrl || !this.apiKey) return [];
 
     const term = query.trim();
     if (!term) return [];
 
-    const doFetch = context?.fetch ?? fetch;
+    const doFetch = this._bypassProxy ? fetch : (context?.fetch ?? fetch);
     const headers = {
       "X-Plex-Token": this.apiKey,
       Accept: "application/json",
     };
 
     if (!this.machineId) {
-      await this.fetchMachineId(headers, doFetch);
+      await this.fetchMachineId(headers, doFetch, context);
     }
 
     const perPage = 25;
