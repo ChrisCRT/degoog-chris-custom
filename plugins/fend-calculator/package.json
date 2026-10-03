@@ -9,7 +9,7 @@
   },
   "private": true,
   "scripts": {
-    "build": "bun build ./src/index.js --target=bun --format=esm --packages=bundle --outdir=./"
+    "build": "bun run build.js"
   },
   "type": "module",
   "dependencies": {
