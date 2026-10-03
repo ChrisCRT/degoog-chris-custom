@@ -13,6 +13,13 @@
   ],
   "plugins": [
     {
+      "path": "plugins/fend-calculator",
+      "name": "Fend Calculator",
+      "description": "Arbitrary-precision unit-aware calculator",
+      "version": "1.0.0",
+      "type": "slot"
+    },
+    {
       "path": "plugins/github-slot",
       "name": "Github",
       "description": "",
