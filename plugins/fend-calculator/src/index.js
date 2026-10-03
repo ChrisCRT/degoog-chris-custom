@@ -50,10 +50,7 @@ const CALC_KEYS_HTML = CALC_KEYS.map((row) => {
 
 const _loadFend = async () => {
   if (!fendInitPromise) {
-    fendInitPromise = import("fend-wasm").then(async (mod) => {
-      if (typeof mod.default === "function") await mod.default();
-      return mod;
-    });
+    fendInitPromise = import("fend-wasm");
   }
   return fendInitPromise;
 };

@@ -13,11 +13,14 @@
   ],
   "plugins": [
     {
-      "path": "plugins/fend-calculator",
+      "path": "plugins/fend-calculator/dist",
       "name": "Fend Calculator",
       "description": "Arbitrary-precision unit-aware calculator",
       "version": "1.0.0",
-      "type": "slot"
+      "type": "slot",
+      "dependencies": [
+        "https://www.npmjs.com/package/fend-wasm"
+      ]
     },
     {
       "path": "plugins/github-slot",

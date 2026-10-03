@@ -106,8 +106,6 @@ const _enhanceCalc = (calc) => {
     if (e.key === "Enter") {
       e.preventDefault();
       runNow();
-    } else if (k === "=") {
-      runNow();
     }
   });
 
