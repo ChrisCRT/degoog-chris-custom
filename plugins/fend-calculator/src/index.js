@@ -83,7 +83,7 @@ const _evaluate = async (expr, timeout = EVAL_TIMEOUT) => {
     const out = { ok: true, result };
     await evalCache.set(expr, out);
     return out;
-  } catch {
+  } catch (err) {
     console.error("[fend-calculator] Fend evaluation failed:", err);
     return {
       ok: false,
@@ -95,12 +95,12 @@ const _evaluate = async (expr, timeout = EVAL_TIMEOUT) => {
 
 const _calcHtml = (expr, result) => {
   return `<div class="fend-calc" data-fend-calc>
-  <div class="fend-calc-screen">
-    <input class="fend-calc-expr" type="text" value="${_esc(expr)}" spellcheck="false" autocomplete="off" />
-    <div class="fend-calc-result">${result ? `= ${_esc(result)}` : ""}</div>
-  </div>
-  <div class="fend-calc-keys">${CALC_KEYS_HTML}</div>
-</div>`;
+              <div class="fend-calc-screen">
+                <input class="fend-calc-expr" type="text" value="${_esc(expr)}" spellcheck="false" autocomplete="off" />
+                <div class="fend-calc-result">${result ? `= ${_esc(result)}` : ""}</div>
+              </div>
+              <div class="fend-calc-keys">${CALC_KEYS_HTML}</div>
+          </div>`;
 };
 
 const _json = (body, status = 200) => {
@@ -110,11 +110,17 @@ const _json = (body, status = 200) => {
   });
 };
 
-export const slot = {
-  isClientExposed: false,
+const _init = (ctx) => {
+  evalCache = ctx.useCache("fend-eval", 30_000);
+};
+
+const _configure = (settings) => {
+  fendEnabled = settings?.enabled !== "false";
+};
+
+export const plugin = {
   id: "fend-calculator",
-  name: "Fend",
-  position: "at-a-glance",
+  name: "Fend Calculator",
   description:
     "Arbitrary-precision natural-language unit-aware calculator powered by fend.",
 
@@ -125,14 +131,19 @@ export const slot = {
       type: "toggle",
     },
   ],
+};
 
-  init(ctx) {
-    evalCache = ctx.useCache("fend-eval", 30_000);
-  },
+export const slot = {
+  isClientExposed: false,
+  name: "Fend Calculator",
+  description:
+    "Arbitrary-precision natural-language unit-aware calculator powered by fend.",
+  position: "at-a-glance",
 
-  configure(settings) {
-    fendEnabled = settings?.enabled !== "false";
-  },
+  settingsSchema: [],
+
+  init: _init,
+  configure: _configure,
 
   async trigger(query) {
     if (!fendEnabled) return false;
@@ -146,6 +157,56 @@ export const slot = {
     const expr = _normalise(query);
     const out = await _evaluate(expr);
     return { html: _calcHtml(expr, out.ok ? out.result : "") };
+  },
+};
+
+export const command = {
+  isClientExposed: false,
+  name: "Fend Calculator",
+  description:
+    "Arbitrary-precision natural-language unit-aware calculator powered by fend.",
+  trigger: "fend",
+  aliases: ["calc", "calculate", "math"],
+
+  settingsSchema: [],
+
+  init: _init,
+  configure: _configure,
+
+  async execute(args) {
+    if (!fendEnabled) {
+      return {
+        title: "Fend",
+        html: `<div class="command-result"><p>Fend is disabled.</p></div>`,
+      };
+    }
+
+    const expr = _normalise(args);
+    if (!expr) {
+      return {
+        title: "Fend",
+        html: `<div class="command-result"><p>Usage: <code>!fend &lt;expression&gt;</code></p></div>`,
+      };
+    }
+
+    const out = await _evaluate(expr);
+    if (!out.ok) {
+      return {
+        title: "Fend",
+        html: `<div class="command-result">
+                  <p>Could not evaluate <code>${_esc(expr)}</code></p>
+              </div>`,
+      };
+    }
+
+    return {
+      title: `Fend: ${expr}`,
+      html: `<div class="command-result">
+                <div class="fend-query">${_esc(expr)}</div>
+                <div class="fend-equals">=</div>
+                <div class="fend-result">${_esc(out.result)}</div>
+            </div>`,
+    };
   },
 };
 
@@ -168,4 +229,4 @@ export const routes = [
   },
 ];
 
-export default { slot, routes };
+export default { slot, command, routes };
