@@ -1,6 +1,7 @@
 <div class="result-item degoog-result">
   <div class="result-item-inner degoog-result--inner">
-    {{#if thumbnail_url}} {{#if is_video}}
+    {{#if thumbnail_url}}
+    {{#if is_video}}
     <div class="result-thumbnail-wrap degoog-result--thumb degoog-result--thumb--video" role="button" tabindex="0"
       aria-label="Play video" data-url="{{ url }}">
       <img class="result-thumbnail-img" src="{{ thumbnail_url }}" alt="" loading="lazy"
@@ -12,23 +13,33 @@
         </svg>
       </div>
     </div>
-    {{/if is_video}} {{^if is_video}}
+    {{/if is_video}}
+    {{^if is_video}}
     <a class="result-thumbnail-wrap degoog-result--thumb" href="{{ url }}" target="{{ link_target }}"
       rel="{{ link_rel }}">
       <img class="result-thumbnail-img" src="{{ thumbnail_url }}" alt="" loading="lazy"
         onerror="this.parentElement.style.display = 'none'" />
     </a>
-    {{/if is_video}} {{/if thumbnail_url}}
+    {{/if is_video}}
+    {{/if thumbnail_url}}
+
     <div class="result-body degoog-result--body">
       <div class="result-url-row degoog-result--url-row">
+        {{#if favicon_missing}}
+        <span id="result-favicon-{{ index }}" class="result-favicon-missing degoog-result--favicon-missing"
+          data-tooltip="{{ favicon_missing_tip }}" data-tooltip-start aria-label="{{ favicon_missing_tip }}"
+          role="img"><i class="fa-solid fa-ghost" aria-hidden="true"></i></span>
+        {{/if favicon_missing}}
+        {{^if favicon_missing}}
         <img id="result-favicon-{{ index }}" class="result-favicon degoog-result--favicon" src="{{ favicon_url }}"
-          data-favicon-host="{{ favicon_host }}" alt="" width="26" height="26"
-          onerror="this.outerHTML = '<i class=&quot;result-favicon fa-solid fa-satellite&quot;></i>'" />
+          data-favicon-host="{{ favicon_host }}" alt="" width="26" height="26" loading="lazy" />
+        {{/if favicon_missing}}
         <cite class="result-cite degoog-result--cite">{{ cite_url }}</cite>
         {{#if insecure}}
         <span class="result-insecure-badge"
           title="{{t:search-templates.result.insecure-tooltip}}">{{t:search-templates.result.insecure}}</span>
-        {{/if insecure}} {{#if show_actions}}
+        {{/if insecure}}
+        {{#if show_actions}}
         <div id="result-actions-{{ index }}" class="result-actions degoog-result--actions"
           data-host="{{ favicon_host }}">
           <button id="result-actions-toggle-{{ index }}" type="button"
@@ -44,31 +55,43 @@
               role="menuitem">
               {{t:search-templates.result.actions.block}}
             </button>
-            {{/if action_block}} {{#if action_replace}}
+            {{/if action_block}}
+            {{#if action_replace}}
             <button id="result-action-replace-{{ index }}" type="button" class="result-actions-item degoog-menu-item"
               role="menuitem">
               {{t:search-templates.result.actions.replace}}
             </button>
-            {{/if action_replace}} {{#if action_score}}
+            {{/if action_replace}}
+            {{#if action_score}}
             <button id="result-action-score-{{ index }}" type="button" class="result-actions-item degoog-menu-item"
               role="menuitem">
               {{t:search-templates.result.actions.score}}
             </button>
             {{/if action_score}}
+            {{#if action_refresh}}
+            <button id="result-action-refresh-{{ index }}" type="button" class="result-actions-item degoog-menu-item"
+              role="menuitem">
+              {{t:search-templates.result.actions.refresh}}
+            </button>
+            {{/if action_refresh}}
           </div>
         </div>
         {{/if show_actions}}
       </div>
       <a class="result-title degoog-result--title" href="{{ url }}" target="{{ link_target }}" rel="{{ link_rel }}">{{
         title }}</a>
-      <p class="result-snippet degoog-result--snippet">{{ snippet }}</p>
+      <p class="result-snippet degoog-result--snippet">{{#if published_at}}<span
+          class="result-date degoog-result--date">{{ published_at }}</span>{{/if published_at}}{{ snippet }}</p>
       <div class="result-engines degoog-result--engines">
-        {{#each sources}} {{#if tooltip}}
+        {{#each sources}}
+        {{#if tooltip}}
         <span class="result-engine-tag degoog-badge degoog-badge--engine-tag" data-tooltip="{{ tooltip }}"
           aria-label="{{ tooltip }}">{{ name }}</span>
-        {{/if tooltip}} {{^if tooltip}}
+        {{/if tooltip}}
+        {{^if tooltip}}
         <span class="result-engine-tag degoog-badge degoog-badge--engine-tag">{{ name }}</span>
-        {{/if tooltip}} {{/each sources}}
+        {{/if tooltip}}
+        {{/each sources}}
         <a class="cached-link" href="https://web.archive.org/web/{{ url }}/" target="{{ link_target }}"
           rel="{{ link_rel }}" data-tooltip="View on Wayback Machine" aria-label="View on Wayback Machine">Cached</a>
       </div>

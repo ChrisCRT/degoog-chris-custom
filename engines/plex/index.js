@@ -181,7 +181,7 @@ export default class PlexEngine {
    * @param {object} context
    * @returns {object}
    */
-  normalizeResult(item, context) {
+  normaliseResult(item, context) {
     const type = String(item.type || "");
     let snippet = item.summary || "";
 
@@ -282,7 +282,7 @@ export default class PlexEngine {
         if (epQuery.episode != null && episode.index !== epQuery.episode) {
           continue;
         }
-        items.push(this.normalizeResult(episode, context));
+        items.push(this.normaliseResult(episode, context));
       }
     }
 
@@ -351,7 +351,7 @@ export default class PlexEngine {
         for (const item of hub.Metadata || []) {
           if (!seen.has(item.ratingKey)) {
             seen.add(item.ratingKey);
-            results.push(this.normalizeResult(item, context));
+            results.push(this.normaliseResult(item, context));
           }
         }
       }

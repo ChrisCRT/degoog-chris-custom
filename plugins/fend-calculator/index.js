@@ -1,5 +1,55 @@
 // @bun
+var __create = Object.create;
+var __getProtoOf = Object.getPrototypeOf;
 var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+function __accessProp(key) {
+  return this[key];
+}
+var __toESMCache_node;
+var __toESMCache_esm;
+var __toESM = (mod, isNodeMode, target) => {
+  var canCache = mod != null && typeof mod === "object";
+  if (canCache) {
+    var cache = isNodeMode ? __toESMCache_node ??= new WeakMap : __toESMCache_esm ??= new WeakMap;
+    var cached = cache.get(mod);
+    if (cached)
+      return cached;
+  }
+  target = mod != null ? __create(__getProtoOf(mod)) : {};
+  const to = isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", { value: mod, enumerable: true }) : target;
+  if (mod && typeof mod === "object" || typeof mod === "function") {
+    for (let key of __getOwnPropNames(mod))
+      if (!__hasOwnProp.call(to, key))
+        __defProp(to, key, {
+          get: __accessProp.bind(mod, key),
+          enumerable: true
+        });
+  }
+  if (canCache)
+    cache.set(mod, to);
+  return to;
+};
+var __toCommonJS = (from) => {
+  var entry = (__moduleCache ??= new WeakMap).get(from), desc;
+  if (entry)
+    return entry;
+  entry = __defProp({}, "__esModule", { value: true });
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (var key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(entry, key))
+        __defProp(entry, key, {
+          get: __accessProp.bind(from, key),
+          enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable
+        });
+  }
+  __moduleCache.set(from, entry);
+  return entry;
+};
+var __moduleCache;
+var __commonJS = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
 var __returnValue = (v) => v;
 function __exportSetter(name, newValue) {
   this[name] = __returnValue.bind(null, newValue);
@@ -13,6 +63,434 @@ var __export = (target, all) => {
       set: __exportSetter.bind(all, name)
     });
 };
+var __esm = (fn, res, err) => () => {
+  if (fn)
+    try {
+      res = fn(fn = 0);
+    } catch (e) {
+      err = [e];
+    }
+  if (err)
+    throw err[0];
+  return res;
+};
+
+// natural-language/languages/en.js
+var exports_en = {};
+__export(exports_en, {
+  default: () => en_default
+});
+var en_default;
+var init_en = __esm(() => {
+  en_default = {
+    code: "en",
+    name: "English",
+    detection: [
+      "to",
+      "in",
+      "as",
+      "plus",
+      "minus",
+      "times",
+      "over",
+      "divided",
+      "by",
+      "calculate",
+      "compute",
+      "evaluate",
+      "what",
+      "is",
+      "square",
+      "root",
+      "cube",
+      "squared",
+      "cubed",
+      "power",
+      "sine",
+      "cosine",
+      "tangent",
+      "log",
+      "logarithm",
+      "natural",
+      "absolute",
+      "value",
+      "factorial",
+      "percent",
+      "of",
+      "round",
+      "decimal",
+      "places"
+    ],
+    conversion: {
+      markers: {
+        to: ["to"],
+        in: ["in"],
+        as: ["as"]
+      },
+      patterns: [["VALUE", "SOURCE_UNIT", "MARKER", "TARGET_UNIT"]]
+    },
+    operators: {
+      plus: ["plus"],
+      minus: ["minus"],
+      multiply: ["times", "multiplied by"],
+      divide: ["divided by", "over"]
+    },
+    functions: {
+      sqrt: ["square root of"],
+      cbrt: ["cube root of"],
+      sin: ["sine of"],
+      cos: ["cosine of"],
+      tan: ["tangent of"],
+      ln: ["natural log of", "natural logarithm of"],
+      log: ["log of", "logarithm of"],
+      log2: ["log base 2 of", "logarithm base 2 of"],
+      abs: ["absolute value of"]
+    },
+    suffixes: {
+      squared: ["squared"],
+      cubed: ["cubed"],
+      factorial: ["factorial"]
+    },
+    power: ["to the power of"],
+    percentage: ["percent of"],
+    rounding: {
+      integer: ["round"],
+      decimals: ["decimal place", "decimal places", "dp"]
+    },
+    dynamic: {
+      random: ["roll", "sample", "random"],
+      dateTime: ["today", "tomorrow", "yesterday", "now"]
+    },
+    cleanup: {
+      leadingCommands: /^(please\s+)?(calculate|compute|evaluate|work\s+out)\s+/i,
+      leadingQuestions: /^what(?:'s| is)\s+/i
+    },
+    output: {
+      locale: "en-GB",
+      ui: {
+        disabled: "Fend is disabled.",
+        usage: "Usage: !fend <expression>",
+        tooLong: "Expression is too long.",
+        couldNotEvaluate: "Could not evaluate"
+      }
+    }
+  };
+});
+
+// natural-language/vocabulary.js
+var require_vocabulary = __commonJS(function(exports, module) {
+  var languages = {
+    en: (init_en(), __toCommonJS(exports_en))
+  };
+  function getLanguage(language) {
+    if (!language)
+      return null;
+    const code = String(language).toLowerCase();
+    return languages[code] || null;
+  }
+  function getLanguages() {
+    return { ...languages };
+  }
+  module.exports = {
+    getLanguage,
+    getLanguages
+  };
+});
+
+// natural-language/detector.js
+var require_detector = __commonJS(function(exports, module) {
+  var { getLanguages } = require_vocabulary();
+  function detectLanguage(query, options = {}) {
+    const text = String(query || "").trim().toLowerCase();
+    if (!text)
+      return null;
+    const languages = getLanguages();
+    let bestLanguage = null;
+    let bestScore = 0;
+    for (const language of Object.values(languages)) {
+      let score = 0;
+      for (const word of language.detection || []) {
+        const escaped = escapeRegExp(word);
+        const pattern = new RegExp(`(?:^|\\s)${escaped}(?=\\s|$|[?!.,])`, "i");
+        if (pattern.test(text))
+          score++;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestLanguage = language.code;
+      }
+    }
+    if (!bestLanguage) {
+      return options.defaultLanguage || null;
+    }
+    return bestLanguage;
+  }
+  function escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  module.exports = {
+    detectLanguage
+  };
+});
+
+// natural-language/parser.js
+var require_parser = __commonJS(function(exports, module) {
+  var { getLanguage } = require_vocabulary();
+  function parse(query, options = {}) {
+    const text = String(query || "").trim();
+    if (!text)
+      return null;
+    const languageCode = options.language || options.languageCode || null;
+    const language = getLanguage(languageCode || "en");
+    if (!language)
+      throw new Error(`Unsupported language: ${languageCode}`);
+    const cleaned = cleanup(text, language);
+    const precision = parsePrecision(cleaned, language);
+    if (precision) {
+      return {
+        type: "expression",
+        language: language.code,
+        expression: precision
+      };
+    }
+    const conversion = parseConversion(cleaned, language);
+    if (conversion) {
+      return {
+        type: "conversion",
+        language: language.code,
+        ...conversion
+      };
+    }
+    const expression = parseExpression(cleaned, language);
+    if (expression) {
+      return {
+        type: "expression",
+        language: language.code,
+        expression,
+        cacheable: isCacheableExpression(cleaned, expression, language)
+      };
+    }
+    return {
+      type: "raw",
+      language: language.code,
+      value: cleaned
+    };
+  }
+  function cleanup(text, language) {
+    let result = text.trim();
+    if (language.cleanup?.leadingCommands) {
+      result = result.replace(language.cleanup.leadingCommands, "");
+    }
+    if (language.cleanup?.leadingQuestions) {
+      result = result.replace(language.cleanup.leadingQuestions, "");
+    }
+    result = result.replace(/\?+$/, "").trim();
+    return result;
+  }
+  function parsePrecision(text, language) {
+    const decimals = language.rounding?.decimals || [];
+    const toMarkers = language.conversion?.markers?.to || [];
+    if (!decimals.length || !toMarkers.length)
+      return null;
+    const decimalPattern = [...decimals].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|");
+    const markerPattern = [...toMarkers].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|");
+    const regex = new RegExp(`^(.+?)\\s+(?:${markerPattern})\\s+(\\d+)\\s+(?:${decimalPattern})$`, "i");
+    const match = text.match(regex);
+    if (!match)
+      return null;
+    return `${match[1].trim()} to ${match[2]} dp`;
+  }
+  function parseConversion(text, language) {
+    const markers = language.conversion?.markers || {};
+    const markerWords = [
+      ...markers.to || [],
+      ...markers.in || [],
+      ...markers.as || []
+    ];
+    if (!markerWords.length)
+      return null;
+    markerWords.sort((a, b) => b.length - a.length);
+    const markerPattern = markerWords.map(escapeRegExp).join("|");
+    const regex = new RegExp(`^(.+?)\\s+(?:${markerPattern})\\s+(.+?)$`, "i");
+    const match = text.match(regex);
+    if (!match)
+      return null;
+    const left = match[1].trim();
+    const targetUnit = match[2].trim();
+    const source = parseValueAndUnit(left);
+    if (!source)
+      return null;
+    return {
+      value: source.value,
+      sourceUnit: source.unit,
+      targetUnit
+    };
+  }
+  function parseValueAndUnit(text) {
+    const match = text.match(/^(.+?)\s+([a-zA-Z\u00B0\u00B5\u03BC\u03A9]+(?:\/[a-zA-Z\u00B0\u00B5\u03BC\u03A9]+)?)$/i);
+    if (!match)
+      return null;
+    return {
+      value: match[1].trim(),
+      unit: match[2].trim()
+    };
+  }
+  function parseExpression(text, language) {
+    let result = text;
+    result = replacePhrase(result, language.operators?.multiply || [], " * ");
+    result = replacePhrase(result, language.operators?.divide || [], " / ");
+    result = replacePhrase(result, language.operators?.plus || [], " + ");
+    result = replacePhrase(result, language.operators?.minus || [], " - ");
+    result = replaceFunction(result, language.functions?.sqrt || [], "sqrt");
+    result = replaceFunction(result, language.functions?.cbrt || [], "cbrt");
+    result = replaceFunction(result, language.functions?.sin || [], "sin");
+    result = replaceFunction(result, language.functions?.cos || [], "cos");
+    result = replaceFunction(result, language.functions?.tan || [], "tan");
+    result = replaceFunction(result, language.functions?.ln || [], "ln");
+    result = replaceFunction(result, language.functions?.log2 || [], "log2");
+    result = replaceFunction(result, language.functions?.log || [], "log");
+    result = replaceFunction(result, language.functions?.abs || [], "abs");
+    result = replaceSuffix(result, language.suffixes?.squared || [], (value) => `(${value})^2`);
+    result = replaceSuffix(result, language.suffixes?.cubed || [], (value) => `(${value})^3`);
+    result = replaceBinaryPhrase(result, language.power || [], (base, exponent) => `${base}^(${exponent})`);
+    result = replaceSuffix(result, language.suffixes?.factorial || [], (value) => `${value}!`);
+    result = replaceBinaryPhrase(result, language.percentage || [], (value, base) => `${value}% of ${base}`);
+    return result.trim();
+  }
+  function replaceSuffix(text, phrases, replacement) {
+    const sorted = [...phrases].sort((a, b) => b.length - a.length);
+    for (const phrase of sorted) {
+      const regex = new RegExp(`^(.+?)\\s+${escapeRegExp(phrase)}$`, "i");
+      const match = text.match(regex);
+      if (match) {
+        return replacement(match[1].trim());
+      }
+    }
+    return text;
+  }
+  function replaceBinaryPhrase(text, phrases, replacer) {
+    const sorted = [...phrases].sort((a, b) => b.length - a.length);
+    for (const phrase of sorted) {
+      const regex = new RegExp(`^(.+?)\\s+${escapeRegExp(phrase)}\\s+(.+)$`, "i");
+      const match = text.match(regex);
+      if (match) {
+        return replacer(match[1].trim(), match[2].trim());
+      }
+    }
+    return text;
+  }
+  function replacePhrase(text, phrases, replacement) {
+    const sorted = [...phrases].sort((a, b) => b.length - a.length);
+    for (const phrase of sorted) {
+      const regex = new RegExp(`\\b${escapeRegExp(phrase)}\\b`, "gi");
+      text = text.replace(regex, replacement);
+    }
+    return text;
+  }
+  function replaceFunction(text, phrases, functionName) {
+    const sorted = [...phrases].sort((a, b) => b.length - a.length);
+    for (const phrase of sorted) {
+      const regex = new RegExp(`^${escapeRegExp(phrase)}\\s+(.+)$`, "i");
+      const match = text.match(regex);
+      if (match) {
+        return `${functionName}(${match[1]})`;
+      }
+    }
+    return text;
+  }
+  function isCacheableExpression(original, expression, language) {
+    if (/\b\d*d\d+\b/i.test(expression)) {
+      return false;
+    }
+    const dynamicWords = [
+      ...language.dynamic?.random || [],
+      ...language.dynamic?.dateTime || []
+    ];
+    return !dynamicWords.some((word) => {
+      const pattern = new RegExp(`(?:^|\\s)${escapeRegExp(word)}(?=\\s|$|[?!.,])`, "i");
+      return pattern.test(original);
+    });
+  }
+  function escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  module.exports = {
+    parse
+  };
+});
+
+// natural-language/normalise.js
+var require_normalise = __commonJS(function(exports, module) {
+  var { detectLanguage } = require_detector();
+  var { parse } = require_parser();
+  function normalise(query, options = {}) {
+    const text = String(query || "").trim();
+    if (!text)
+      return "";
+    const language = options.language || options.languageCode || detectLanguage(text, { defaultLanguage: options.defaultLanguage }) || "en";
+    const result = parse(text, {
+      ...options,
+      language
+    });
+    switch (result.type) {
+      case "conversion":
+        return {
+          language: result.language,
+          type: result.type,
+          original: text,
+          expression: `${result.value} ${result.sourceUnit} to ${result.targetUnit}`,
+          value: result.value,
+          sourceUnit: result.sourceUnit,
+          targetUnit: result.targetUnit,
+          cacheable: true
+        };
+      case "expression":
+        return {
+          language: result.language,
+          type: result.type,
+          original: text,
+          expression: stripTrailingEquals(result.expression),
+          cacheable: result.cacheable !== false
+        };
+      case "raw":
+        return {
+          language: result.language,
+          type: result.type,
+          original: text,
+          expression: stripTrailingEquals(result.value),
+          cacheable: true
+        };
+      default:
+        return {
+          language,
+          type: "raw",
+          original: text,
+          expression: stripTrailingEquals(text)
+        };
+    }
+  }
+  function stripTrailingEquals(value) {
+    if (typeof value !== "string") {
+      return "";
+    }
+    return value.endsWith("=") ? value.slice(0, -1).trim() : value.trim();
+  }
+  module.exports = {
+    normalise
+  };
+});
+
+// natural-language/index.js
+var require_natural_language = __commonJS(function(exports, module) {
+  var { detectLanguage } = require_detector();
+  var { parse } = require_parser();
+  var { normalise } = require_normalise();
+  module.exports = {
+    detectLanguage,
+    parse,
+    normalise
+  };
+});
 
 // node_modules/fend-wasm-web/fend_wasm.js
 var exports_fend_wasm = {};
@@ -419,6 +897,8 @@ async function __wbg_init(module_or_path) {
 }
 
 // src/index.js
+var import_natural_language = __toESM(require_natural_language(), 1);
+var import_vocabulary = __toESM(require_vocabulary(), 1);
 var fendInitPromise = null;
 var evalCache = null;
 var fendEnabled = true;
@@ -462,28 +942,50 @@ var _loadFend = async () => {
   }
   return fendInitPromise;
 };
-var _normalise = (expr) => {
-  const input = String(expr || "").trim();
-  if (!input)
-    return "";
-  return input.endsWith("=") ? input.slice(0, -1).trim() : input;
+var _getRollSides = (expression) => {
+  if (typeof expression !== "string")
+    return null;
+  const s = expression.trim().toLowerCase();
+  const dice = s.match(/(?:^|\s)(\d*)d(\d+)\b/);
+  if (!dice)
+    return null;
+  const sides = Number(dice[2]);
+  return Number.isInteger(sides) && sides > 0 ? sides : null;
 };
-var _evaluate = async (expr, timeout = EVAL_TIMEOUT) => {
-  if (!expr || expr.length > MAX_EXPR_LEN)
+var _getLanguage = (parsed) => {
+  if (!parsed?.language)
+    return import_vocabulary.getLanguage("en");
+  return import_vocabulary.getLanguage(parsed.language) || import_vocabulary.getLanguage("en");
+};
+var _normalise = (input, language) => {
+  const parsed = import_natural_language.normalise(input, { language: language || undefined });
+  if (!parsed || !parsed.expression)
+    return null;
+  return parsed;
+};
+var _evaluate = async (parsed, timeout = EVAL_TIMEOUT) => {
+  if (!parsed?.expression || parsed.expression.length > MAX_EXPR_LEN) {
     return { ok: false, result: "" };
+  }
+  const expression = parsed.expression;
+  const cacheable = parsed.cacheable !== false;
+  const cacheKey = `${parsed.language || "en"}:${parsed.expression}`;
   try {
-    const cached = await evalCache.get(expr);
-    if (cached !== undefined && cached !== null)
-      return cached;
+    if (cacheable && evalCache) {
+      const cached = await evalCache.get(cacheKey);
+      if (cached !== undefined && cached !== null)
+        return cached;
+    }
     const fend = await _loadFend();
-    const result = fend.evaluateFendWithTimeout(expr, timeout);
+    const result = fend.evaluateFendWithTimeout(expression, timeout);
     if (typeof result !== "string" || !result)
       return { ok: false, result: "" };
     if (result.startsWith("Error:")) {
       return { ok: false, result: "", error: result.trim() };
     }
     const out = { ok: true, result };
-    await evalCache.set(expr, out);
+    if (cacheable && evalCache)
+      await evalCache.set(cacheKey, out);
     return out;
   } catch (err) {
     console.error("[fend-calculator] Fend evaluation failed:", err);
@@ -494,14 +996,54 @@ var _evaluate = async (expr, timeout = EVAL_TIMEOUT) => {
     };
   }
 };
-var _calcHtml = (expr, result) => {
-  return `<div class="fend-calc" data-fend-calc>
-              <div class="fend-calc-screen">
-                <input class="fend-calc-expr" type="text" value="${_esc(expr)}" spellcheck="false" autocomplete="off" />
-                <div class="fend-calc-result">${result ? `= ${_esc(result)}` : ""}</div>
-              </div>
-              <div class="fend-calc-keys">${CALC_KEYS_HTML}</div>
-          </div>`;
+var _formatNumber = (result, language) => {
+  if (typeof result !== "string" || !result) {
+    return result || "";
+  }
+  const decimalSeparator = language?.output?.number?.decimalSeparator;
+  if (typeof decimalSeparator !== "string" || decimalSeparator.length !== 1 || decimalSeparator === ".") {
+    return result;
+  }
+  if (/^-?(?:\d+|\d*\.\d+)$/.test(result.trim())) {
+    return result.replace(".", decimalSeparator);
+  }
+  return result;
+};
+var _formatResult = (result, parsed) => {
+  if (!result || !parsed) {
+    return result || "";
+  }
+  const language = _getLanguage(parsed);
+  return _formatNumber(result, language);
+};
+var _getUi = (parsed) => {
+  const language = _getLanguage(parsed);
+  return language?.output?.ui || {
+    disabled: "Fend is disabled.",
+    usage: "Usage: !fend <expression>",
+    tooLong: "Expression is too long.",
+    couldNotEvaluate: "Could not evaluate"
+  };
+};
+var _rollHtml = () => `
+  <div class="fend-die-wrap" data-fend-die>
+    <div class="fend-die" data-fend-die-value>?</div>
+    <div class="fend-die-shadow"></div>
+  </div>
+`;
+var _calcHtml = (expression, result) => {
+  const isRoll = _getRollSides(expression) !== null;
+  return `
+  <div class="fend-calc" data-fend-calc>
+    <div class="fend-calc-screen">
+      <input id="fend-calc-expression" name="expression" class="fend-calc-expr" type="text" value="${_esc(expression)}" spellcheck="false" autocomplete="off" />
+      <div class="fend-calc-result" data-fend-calc-result>
+        ${isRoll ? _rollHtml() : result ? `= ${_esc(result)}` : ""}
+      </div>
+    </div>
+    <div class="fend-calc-keys">${CALC_KEYS_HTML}</div>
+  </div>
+  `;
 };
 var _json = (body, status = 200) => {
   return new Response(JSON.stringify(body), {
@@ -536,18 +1078,27 @@ var slot = {
   init: _init,
   configure: _configure,
   async trigger(query) {
-    if (!fendEnabled)
+    if (!fendEnabled || query.length > MAX_EXPR_LEN)
       return false;
-    const expr = _normalise(query);
-    if (!expr || expr.length > MAX_EXPR_LEN)
+    const parsed = _normalise(query);
+    if (!parsed?.expression) {
       return false;
-    const out = await _evaluate(expr, 250);
+    }
+    const out = await _evaluate(parsed, 250);
     return out.ok;
   },
-  async execute(query) {
-    const expr = _normalise(query);
-    const out = await _evaluate(expr);
-    return { html: _calcHtml(expr, out.ok ? out.result : "") };
+  async execute(query, context) {
+    const parsed = _normalise(query, context?.lang);
+    if (!parsed?.expression) {
+      return {
+        html: _calcHtml(typeof query === "string" ? query : "", "")
+      };
+    }
+    const out = await _evaluate(parsed);
+    const result = out.ok ? _formatResult(out.result, parsed) : "";
+    return {
+      html: _calcHtml(parsed.original || parsed.expression, result)
+    };
   }
 };
 var command = {
@@ -559,36 +1110,60 @@ var command = {
   settingsSchema: [],
   init: _init,
   configure: _configure,
-  async execute(args) {
+  async execute(args, context) {
     if (!fendEnabled) {
+      const language = import_vocabulary.getLanguage(context?.lang || "en");
+      const ui = language?.output?.ui || {};
       return {
-        title: "Fend",
-        html: `<div class="command-result"><p>Fend is disabled.</p></div>`
-      };
-    }
-    const expr = _normalise(args);
-    if (!expr) {
-      return {
-        title: "Fend",
-        html: `<div class="command-result"><p>Usage: <code>!fend &lt;expression&gt;</code></p></div>`
-      };
-    }
-    const out = await _evaluate(expr);
-    if (!out.ok) {
-      return {
-        title: "Fend",
+        title: "Fend Calculator",
         html: `<div class="command-result">
-                  <p>Could not evaluate <code>${_esc(expr)}</code></p>
+                 <p>${_esc(ui.disabled || "Fend is disabled.")}</p>
+               </div>`
+      };
+    }
+    const parsed = _normalise(args, context?.lang);
+    const ui = _getUi(parsed);
+    if (!parsed?.expression) {
+      return {
+        title: "Fend Calculator",
+        html: `<div class="command-result">
+                 <p>${_esc(ui.usage || "Usage: !fend <expression>")}</p>
+               </div>`
+      };
+    }
+    if (parsed.expression.length > MAX_EXPR_LEN) {
+      return {
+        title: "Fend Calculator",
+        html: `<div class="command-result">
+                <p>${_esc(ui.tooLong || "Expression is too long.")}</p>
               </div>`
       };
     }
+    const out = await _evaluate(parsed);
+    if (!out.ok) {
+      return {
+        title: "Fend Calculator",
+        html: `<div class="command-result">
+                <p>${_esc(ui.couldNotEvaluate || "Could not evaluate")}
+                  <code>
+                    ${_esc(parsed.original || parsed.expression)}
+                  </code>
+                </p>
+              </div>`
+      };
+    }
+    const result = _formatResult(out.result, parsed);
     return {
-      title: `Fend: ${expr}`,
+      title: "Fend Calculator",
       html: `<div class="command-result">
-                <div class="fend-query">${_esc(expr)}</div>
-                <div class="fend-equals">=</div>
-                <div class="fend-result">${_esc(out.result)}</div>
-            </div>`
+               <div class="fend-query">
+                 ${_esc(parsed.original || parsed.expression)}
+               </div>
+               <div class="fend-equals">=</div>
+               <div class="fend-result">
+                 ${_esc(result)}
+               </div>
+             </div>`
     };
   }
 };
@@ -597,16 +1172,36 @@ var routes = [
     method: "get",
     path: "/eval",
     handler: async (req) => {
-      if (!fendEnabled)
+      if (!fendEnabled) {
         return _json({ ok: false, error: "disabled" }, 403);
-      const expr = _normalise(new URL(req.url).searchParams.get("expr") || "");
-      if (!expr)
-        return _json({ ok: false, error: "empty" }, 400);
-      if (expr.length > MAX_EXPR_LEN) {
+      }
+      const input = new URL(req.url).searchParams.get("expr") || "";
+      if (input.length > MAX_EXPR_LEN) {
         return _json({ ok: false, error: "too-long" }, 400);
       }
-      const out = await _evaluate(expr);
-      return _json(out);
+      const parsed = _normalise(input);
+      if (!parsed?.expression) {
+        return _json({ ok: false, error: "empty" }, 400);
+      }
+      const out = await _evaluate(parsed);
+      if (!out.ok) {
+        return _json({
+          ok: false,
+          error: "evaluation-failed",
+          language: parsed.language,
+          type: parsed.type,
+          original: parsed.original,
+          expression: parsed.expression
+        });
+      }
+      return _json({
+        ...out,
+        language: parsed.language,
+        type: parsed.type,
+        original: parsed.original,
+        expression: parsed.expression,
+        result: _formatResult(out.result, parsed)
+      });
     }
   }
 ];
