@@ -1,5 +1,4 @@
 import * as fendModule from "fend-wasm-web";
-import { normalise, getLanguage } from "../natural-language";
 
 let fendInitPromise = null;
 let evalCache = null;
@@ -61,48 +60,84 @@ const _loadFend = async () => {
   return fendInitPromise;
 };
 
-const _getRollSides = (expression) => {
-  if (typeof expression !== "string") return null;
-  const s = expression.trim().toLowerCase();
-  const dice = s.match(/(?:^|\s)(\d*)d(\d+)\b/);
-  if (!dice) return null;
-  const sides = Number(dice[2]);
-  return Number.isInteger(sides) && sides > 0 ? sides : null;
+const _normalise = (expr) => {
+  let input = String(expr || "").trim();
+  if (!input) return "";
+  input = _naturalLanguage(input);
+  return input.endsWith("=") ? input.slice(0, -1).trim() : input;
 };
 
-const _getLanguage = (parsed) => {
-  if (!parsed?.language) return getLanguage("en");
-  return getLanguage(parsed.language) || getLanguage("en");
+const _naturalLanguage = (query) => {
+  let s = String(query || "")
+    .trim()
+    .toLowerCase();
+
+  s = s
+    .replace(
+      /^(please\s+)?(calculate|compute|convert|evaluate|work out)\s+/i,
+      "",
+    )
+    .replace(/^(what(?:'s| is)\s+)/i, "")
+    .replace(/\?+$/, "")
+    .trim();
+
+  s = s.replace(/^(.+?)\s+plus\s+(.+)$/i, "$1 + $2");
+  s = s.replace(/^(.+?)\s+minus\s+(.+)$/i, "$1 - $2");
+  s = s.replace(/^(.+?)\s+(?:times|multiplied\s+by)\s+(.+)$/i, "$1 * $2");
+  s = s.replace(/^(.+?)\s+(?:divided\s+by|over)\s+(.+)$/i, "$1 / $2");
+
+  // square root
+  s = s.replace(/^square\s+root\s+of\s+(.+)$/i, "sqrt($1)");
+
+  // cube root
+  s = s.replace(/^cube\s+root\s+of\s+(.+)$/i, "cbrt($1)");
+
+  // powers
+  s = s.replace(/^(.+?)\s+squared$/i, "($1)^2");
+  s = s.replace(/^(.+?)\s+cubed$/i, "($1)^3");
+  s = s.replace(/^(.+?)\s+to\s+the\s+power\s+of\s+(.+)$/i, "$1^($2)");
+
+  // trig
+  s = s.replace(/^sine\s+of\s+(.+)$/i, "sin($1)");
+  s = s.replace(/^cosine\s+of\s+(.+)$/i, "cos($1)");
+  s = s.replace(/^tangent\s+of\s+(.+)$/i, "tan($1)");
+
+  // log
+  s = s.replace(/^natural\s+log(?:arithm)?\s+of\s+(.+)$/i, "ln($1)");
+  s = s.replace(/^log(?:arithm)?\s+of\s+(.+)$/i, "log($1)");
+  s = s.replace(/^log(?:arithm)?\s+base\s+2\s+of\s+(.+)$/i, "log2($1)");
+
+  // absolute
+  s = s.replace(/^absolute\s+value\s+of\s+(.+)$/i, "abs($1)");
+
+  // factorial
+  s = s.replace(/^(.+?)\s+factorial$/i, "$1!");
+
+  // percent
+  s = s.replace(/^(.+?)\s+percent\s+of\s+(.+)$/i, "$1% of $2");
+
+  // decimal places
+  s = s.replace(/\bdecimal\s+places?\b/gi, "dp");
+
+  return s;
 };
 
-const _normalise = (input, language) => {
-  const parsed = normalise(input, { language: language || undefined });
-  if (!parsed || !parsed.expression) return null;
-  return parsed;
-};
+const _evaluate = async (expr, timeout = EVAL_TIMEOUT) => {
+  if (!expr || expr.length > MAX_EXPR_LEN) return { ok: false, result: "" };
 
-const _evaluate = async (parsed, timeout = EVAL_TIMEOUT) => {
-  if (!parsed?.expression || parsed.expression.length > MAX_EXPR_LEN) {
-    return { ok: false, result: "" };
-  }
-  const expression = parsed.expression;
-  const cacheable = parsed.cacheable !== false;
-  const cacheKey = `${parsed.language || "en"}:${parsed.expression}`;
   try {
-    if (cacheable && evalCache) {
-      const cached = await evalCache.get(cacheKey);
-      if (cached !== undefined && cached !== null) return cached;
-    }
+    const cached = await evalCache.get(expr);
+    if (cached !== undefined && cached !== null) return cached;
 
     const fend = await _loadFend();
-    const result = fend.evaluateFendWithTimeout(expression, timeout);
+    const result = fend.evaluateFendWithTimeout(expr, timeout);
     if (typeof result !== "string" || !result) return { ok: false, result: "" };
     if (result.startsWith("Error:")) {
       return { ok: false, result: "", error: result.trim() };
     }
 
     const out = { ok: true, result };
-    if (cacheable && evalCache) await evalCache.set(cacheKey, out);
+    await evalCache.set(expr, out);
     return out;
   } catch (err) {
     console.error("[fend-calculator] Fend evaluation failed:", err);
@@ -114,65 +149,14 @@ const _evaluate = async (parsed, timeout = EVAL_TIMEOUT) => {
   }
 };
 
-const _formatNumber = (result, language) => {
-  if (typeof result !== "string" || !result) {
-    return result || "";
-  }
-
-  const decimalSeparator = language?.output?.number?.decimalSeparator;
-
-  if (
-    typeof decimalSeparator !== "string" ||
-    decimalSeparator.length !== 1 ||
-    decimalSeparator === "."
-  ) {
-    return result;
-  }
-
-  if (/^-?(?:\d+|\d*\.\d+)$/.test(result.trim())) {
-    return result.replace(".", decimalSeparator);
-  }
-
-  return result;
-};
-
-const _formatResult = (result, parsed) => {
-  if (!result || !parsed) {
-    return result || "";
-  }
-  const language = _getLanguage(parsed);
-  return _formatNumber(result, language);
-};
-
-const _getUi = (parsed) => {
-  const language = _getLanguage(parsed);
-  return (
-    language?.output?.ui || {
-      disabled: "Fend is disabled.",
-      usage: "Usage: !fend <expression>",
-      tooLong: "Expression is too long.",
-      couldNotEvaluate: "Could not evaluate",
-    }
-  );
-};
-
-const _rollHtml = () => `
-  <div class="fend-die-wrap" data-fend-die>
-    <div class="fend-die" data-fend-die-value>?</div>
-    <div class="fend-die-shadow"></div>
-  </div>
-`;
-const _calcHtml = (expression, result) => {
-  const isRoll = _getRollSides(expression) !== null;
-  return `
-  <div class="fend-calc" data-fend-calc>
-    <div class="fend-calc-screen">
-      <input id="fend-calc-expression" name="expression" class="fend-calc-expr" type="text" value="${_esc(expression)}" spellcheck="false" autocomplete="off" />
-      <div class="fend-calc-result" data-fend-calc-result>${isRoll ? _rollHtml() : result ? `= ${_esc(result)}` : ""}</div>
-    </div>
-    <div class="fend-calc-keys">${CALC_KEYS_HTML}</div>
-  </div>
-  `;
+const _calcHtml = (expr, result) => {
+  return `<div class="fend-calc" data-fend-calc>
+              <div class="fend-calc-screen">
+                <input id="fend-calc-expression" name="expression" class="fend-calc-expr" type="text" value="${_esc(expr)}" spellcheck="false" autocomplete="off" />
+                <div class="fend-calc-result">${result ? `= ${_esc(result)}` : ""}</div>
+              </div>
+              <div class="fend-calc-keys">${CALC_KEYS_HTML}</div>
+          </div>`;
 };
 
 const _json = (body, status = 200) => {
@@ -185,6 +169,7 @@ const _json = (body, status = 200) => {
 const _init = (ctx) => {
   evalCache = ctx.useCache("fend-eval", 30_000);
 };
+
 const _configure = (settings) => {
   fendEnabled = settings?.enabled !== "false";
 };
@@ -194,6 +179,7 @@ export const plugin = {
   name: "Fend Calculator",
   description:
     "Arbitrary-precision natural-language unit-aware calculator powered by fend.",
+
   settingsSchema: [
     {
       key: "enabled",
@@ -209,27 +195,24 @@ export const slot = {
   description:
     "Arbitrary-precision natural-language unit-aware calculator powered by fend.",
   position: "at-a-glance",
+
   settingsSchema: [],
 
   init: _init,
   configure: _configure,
 
   async trigger(query) {
-    if (!fendEnabled || query.length > MAX_EXPR_LEN) return false;
-    const parsed = _normalise(query);
-    if (!parsed?.expression) return false;
-    const out = await _evaluate(parsed, 250);
+    if (!fendEnabled) return false;
+    const expr = _normalise(query);
+    if (!expr || expr.length > MAX_EXPR_LEN) return false;
+    const out = await _evaluate(expr, 250);
     return out.ok;
   },
 
-  async execute(query, context) {
-    const parsed = _normalise(query, context?.lang);
-    if (!parsed?.expression) {
-      return { html: _calcHtml(typeof query === "string" ? query : "", "") };
-    }
-    const out = await _evaluate(parsed);
-    const result = out.ok ? _formatResult(out.result, parsed) : "";
-    return { html: _calcHtml(parsed.original || parsed.expression, result) };
+  async execute(query) {
+    const expr = _normalise(query);
+    const out = await _evaluate(expr);
+    return { html: _calcHtml(expr, out.ok ? out.result : "") };
   },
 };
 
@@ -240,66 +223,45 @@ export const command = {
     "Arbitrary-precision natural-language unit-aware calculator powered by fend.",
   trigger: "fend",
   aliases: ["calc", "calculate", "math"],
+
   settingsSchema: [],
 
   init: _init,
   configure: _configure,
 
-  async execute(args, context) {
+  async execute(args) {
     if (!fendEnabled) {
-      const language = getLanguage(context?.lang || "en");
-      const ui = language?.output?.ui || {};
+      return {
+        title: "Fend",
+        html: `<div class="command-result"><p>Fend is disabled.</p></div>`,
+      };
+    }
 
+    const expr = _normalise(args);
+    if (!expr) {
       return {
-        title: "Fend Calculator",
-        html: `<div class="command-result">
-                 <p>${_esc(ui.disabled || "Fend is disabled.")}</p>
-               </div>`,
+        title: "Fend",
+        html: `<div class="command-result"><p>Usage: <code>!fend &lt;expression&gt;</code></p></div>`,
       };
     }
-    const parsed = _normalise(args, context?.lang);
-    const ui = _getUi(parsed);
-    if (!parsed?.expression) {
-      return {
-        title: "Fend Calculator",
-        html: `<div class="command-result">
-                 <p>${_esc(ui.usage || "Usage: !fend <expression>")}</p>
-               </div>`,
-      };
-    }
-    if (parsed.expression.length > MAX_EXPR_LEN) {
-      return {
-        title: "Fend Calculator",
-        html: `<div class="command-result">
-                <p>${_esc(ui.tooLong || "Expression is too long.")}</p>
-              </div>`,
-      };
-    }
-    const out = await _evaluate(parsed);
+
+    const out = await _evaluate(expr);
     if (!out.ok) {
       return {
-        title: "Fend Calculator",
+        title: "Fend",
         html: `<div class="command-result">
-                <p>${_esc(ui.couldNotEvaluate || "Could not evaluate")}
-                  <code>
-                    ${_esc(parsed.original || parsed.expression)}
-                  </code>
-                </p>
+                  <p>Could not evaluate <code>${_esc(expr)}</code></p>
               </div>`,
       };
     }
-    const result = _formatResult(out.result, parsed);
+
     return {
-      title: "Fend Calculator",
+      title: `Fend: ${expr}`,
       html: `<div class="command-result">
-               <div class="fend-query">
-                 ${_esc(parsed.original || parsed.expression)}
-               </div>
-               <div class="fend-equals">=</div>
-               <div class="fend-result">
-                 ${_esc(result)}
-               </div>
-             </div>`,
+                <div class="fend-query">${_esc(expr)}</div>
+                <div class="fend-equals">=</div>
+                <div class="fend-result">${_esc(out.result)}</div>
+            </div>`,
     };
   },
 };
@@ -308,41 +270,17 @@ export const routes = [
   {
     method: "get",
     path: "/eval",
-
     handler: async (req) => {
-      if (!fendEnabled) {
-        return _json({ ok: false, error: "disabled" }, 403);
-      }
+      if (!fendEnabled) return _json({ ok: false, error: "disabled" }, 403);
 
-      const input = new URL(req.url).searchParams.get("expr") || "";
-      if (input.length > MAX_EXPR_LEN) {
+      const expr = _normalise(new URL(req.url).searchParams.get("expr") || "");
+      if (!expr) return _json({ ok: false, error: "empty" }, 400);
+      if (expr.length > MAX_EXPR_LEN) {
         return _json({ ok: false, error: "too-long" }, 400);
       }
-      const parsed = _normalise(input);
-      if (!parsed?.expression) {
-        return _json({ ok: false, error: "empty" }, 400);
-      }
 
-      const out = await _evaluate(parsed);
-      if (!out.ok) {
-        return _json({
-          ok: false,
-          error: "evaluation-failed",
-          language: parsed.language,
-          type: parsed.type,
-          original: parsed.original,
-          expression: parsed.expression,
-        });
-      }
-
-      return _json({
-        ...out,
-        language: parsed.language,
-        type: parsed.type,
-        original: parsed.original,
-        expression: parsed.expression,
-        result: _formatResult(out.result, parsed),
-      });
+      const out = await _evaluate(expr);
+      return _json(out);
     },
   },
 ];
