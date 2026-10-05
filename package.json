@@ -16,7 +16,7 @@
       "path": "plugins/fend-calculator",
       "name": "Fend Calculator",
       "description": "Arbitrary-precision unit-aware calculator",
-      "version": "1.0.0",
+      "version": "0.0.5",
       "type": "slot"
     },
     {
