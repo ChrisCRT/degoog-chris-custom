@@ -428,10 +428,7 @@ var require_normalise = __commonJS(function(exports, module) {
     if (!text)
       return "";
     const language = options.language || options.languageCode || detectLanguage(text, { defaultLanguage: options.defaultLanguage }) || "en";
-    const result = parse(text, {
-      ...options,
-      language
-    });
+    const result = parse(text, { ...options, language });
     switch (result.type) {
       case "conversion":
         return {
@@ -470,9 +467,8 @@ var require_normalise = __commonJS(function(exports, module) {
     }
   }
   function stripTrailingEquals(value) {
-    if (typeof value !== "string") {
+    if (typeof value !== "string")
       return "";
-    }
     return value.endsWith("=") ? value.slice(0, -1).trim() : value.trim();
   }
   module.exports = {
@@ -485,8 +481,10 @@ var require_natural_language = __commonJS(function(exports, module) {
   var { detectLanguage } = require_detector();
   var { parse } = require_parser();
   var { normalise } = require_normalise();
+  var { getLanguage } = require_vocabulary();
   module.exports = {
     detectLanguage,
+    getLanguage,
     parse,
     normalise
   };
@@ -898,7 +896,6 @@ async function __wbg_init(module_or_path) {
 
 // src/index.js
 var import_natural_language = __toESM(require_natural_language(), 1);
-var import_vocabulary = __toESM(require_vocabulary(), 1);
 var fendInitPromise = null;
 var evalCache = null;
 var fendEnabled = true;
@@ -954,8 +951,8 @@ var _getRollSides = (expression) => {
 };
 var _getLanguage = (parsed) => {
   if (!parsed?.language)
-    return import_vocabulary.getLanguage("en");
-  return import_vocabulary.getLanguage(parsed.language) || import_vocabulary.getLanguage("en");
+    return import_natural_language.getLanguage("en");
+  return import_natural_language.getLanguage(parsed.language) || import_natural_language.getLanguage("en");
 };
 var _normalise = (input, language) => {
   const parsed = import_natural_language.normalise(input, { language: language || undefined });
@@ -1037,9 +1034,7 @@ var _calcHtml = (expression, result) => {
   <div class="fend-calc" data-fend-calc>
     <div class="fend-calc-screen">
       <input id="fend-calc-expression" name="expression" class="fend-calc-expr" type="text" value="${_esc(expression)}" spellcheck="false" autocomplete="off" />
-      <div class="fend-calc-result" data-fend-calc-result>
-        ${isRoll ? _rollHtml() : result ? `= ${_esc(result)}` : ""}
-      </div>
+      <div class="fend-calc-result" data-fend-calc-result>${isRoll ? _rollHtml() : result ? `= ${_esc(result)}` : ""}</div>
     </div>
     <div class="fend-calc-keys">${CALC_KEYS_HTML}</div>
   </div>
@@ -1081,24 +1076,19 @@ var slot = {
     if (!fendEnabled || query.length > MAX_EXPR_LEN)
       return false;
     const parsed = _normalise(query);
-    if (!parsed?.expression) {
+    if (!parsed?.expression)
       return false;
-    }
     const out = await _evaluate(parsed, 250);
     return out.ok;
   },
   async execute(query, context) {
     const parsed = _normalise(query, context?.lang);
     if (!parsed?.expression) {
-      return {
-        html: _calcHtml(typeof query === "string" ? query : "", "")
-      };
+      return { html: _calcHtml(typeof query === "string" ? query : "", "") };
     }
     const out = await _evaluate(parsed);
     const result = out.ok ? _formatResult(out.result, parsed) : "";
-    return {
-      html: _calcHtml(parsed.original || parsed.expression, result)
-    };
+    return { html: _calcHtml(parsed.original || parsed.expression, result) };
   }
 };
 var command = {
@@ -1112,7 +1102,7 @@ var command = {
   configure: _configure,
   async execute(args, context) {
     if (!fendEnabled) {
-      const language = import_vocabulary.getLanguage(context?.lang || "en");
+      const language = import_natural_language.getLanguage(context?.lang || "en");
       const ui = language?.output?.ui || {};
       return {
         title: "Fend Calculator",
