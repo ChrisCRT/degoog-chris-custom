@@ -721,8 +721,8 @@ var command = {
       };
     }
     return {
-      title: `Fend: ${intent.expression}`,
-      html: _calcHtml(intent)
+      title: `Fend: ${args}`,
+      html: _calcHtml(intent, out.result)
     };
   }
 };
