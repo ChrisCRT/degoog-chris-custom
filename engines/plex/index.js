@@ -149,9 +149,7 @@ export default class PlexEngine {
     */
 
     if (this.urlMode === "plexWeb") {
-      return `https://app.plex.tv/desktop/#!/server/${encodeURIComponent(
-        this.machineId,
-      )}/details?key=${encodeURIComponent(`/library/metadata/${ratingKey}`)}`;
+      return `https://app.plex.tv/desktop/#!/server/${encodeURIComponent(this.machineId)}/details?key=${encodeURIComponent(`/library/metadata/${ratingKey}`)}`;
     }
 
     return `${this.plexUrl}/web/index.html#!/server/${this.machineId}/details?key=${encodeURIComponent(`/library/metadata/${ratingKey}`)}`;
@@ -220,9 +218,21 @@ export default class PlexEngine {
     };
 
     const thumbPath = item.thumb || item.art;
-
     if (thumbPath) {
       result.thumbnail = this.buildThumbnailUrl(thumbPath, context);
+    }
+
+    const duration = item.duration;
+    if (duration) {
+      const dur = Math.floor(Number(duration) / 1000),
+        h = Math.floor(dur / 3600),
+        m = Math.floor((dur % 3600) / 60),
+        s = dur % 60;
+      result.duration = [
+        h > 0 ? String(h).padStart(2, "0") : "",
+        String(m).padStart(2, "0"),
+        String(s).padStart(2, "0"),
+      ].join(":");
     }
 
     return result;

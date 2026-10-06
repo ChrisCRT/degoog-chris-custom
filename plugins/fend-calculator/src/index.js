@@ -1,5 +1,6 @@
 import * as fendModule from "fend-wasm-web";
 import { initCurrency, fetchCurrencyRates } from "./currency";
+import { dateCommands } from "./date";
 
 let fendEnabled = true;
 let doFetch = null;
@@ -53,29 +54,26 @@ const _parseLanguage = (query) => {
     .replace(/^(.+?)\s+percent\s+of\s+(.+)$/i, "$1% of $2")
     .replace(/\bdecimal\s+places?\b/gi, "dp");
 
+  expr = dateCommands(expr);
+
   expr = expr.endsWith("=") ? expr.slice(0, -1).trim() : expr;
 
-  return { type: "calc", expression: expr, raw: query };
+  return { expression: expr, raw: query };
 };
 
-const _isNoCacheExpression = (type) => {
-  switch (type) {
-    case "roll":
-    case "sample":
-    case "now":
-    case "today":
-    case "tomorrow":
-      return true;
-    default:
-      return false;
-  }
+const _isNoCacheExpression = (expr) => {
+  let type = "calc";
+  if (/^\s*roll\b/i.test(expr)) type = "roll";
+  if (/^\s*sample\b/i.test(expr)) type = "sample";
+
+  return type === "calc";
 };
 
 const _evaluate = async (query, timeout = EVAL_TIMEOUT) => {
   if (query.length > MAX_EXPR_LEN) return { ok: false, result: "" };
   const intent = _parseLanguage(query);
   const expr = intent.expression;
-  const isNoCache = _isNoCacheExpression(intent.type);
+  const isNoCache = _isNoCacheExpression(expr);
   if (!expr) return { ok: false, result: "" };
 
   try {

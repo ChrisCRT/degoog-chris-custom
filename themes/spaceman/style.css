@@ -11,12 +11,18 @@
   color-scheme: light;
   --bg: hsl(0 0% 95%);
   --border-light: hsl(0 0% 87%);
+
+  --search-bar-bg: hsl(0 33% 98%);
+  --search-bar-bg-hover: hsl(0 33% 99%);
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
   --bg: hsl(220 10% 6%);
   --bg-light: hsl(216 10% 10%);
+
+  --search-bar-bg: hsl(0 4% 19%);
+  --search-bar-bg-hover: hsl(0 4% 20%);
 }
 
 html {

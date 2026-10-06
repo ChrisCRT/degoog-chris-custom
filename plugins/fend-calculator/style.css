@@ -73,6 +73,18 @@
   border: 0;
   border-radius: 12px;
   outline: none;
+  border: 1px solid transparent;
+  transition:
+    border-color 0.3s ease,
+    background-color 0.3s ease;
+}
+
+.fend-calc-expr:is(:hover, :focus) {
+  border-color: var(--border-light);
+}
+
+.fend-calc-expr:focus-visible {
+  background-color: var(--search-bar-bg-hover);
 }
 
 .fend-calc-result {
@@ -81,6 +93,7 @@
   color: var(--text-primary);
   min-height: 1.6rem;
   padding: 0 0.75rem;
+  word-wrap: break-word;
   overflow-x: auto;
 }
 
@@ -159,7 +172,7 @@
 }
 
 .fend-die.landed {
-  animation: fend-die-land 0.35s cubic-bezier(.2, 1.5, .4, 1);
+  animation: fend-die-land 0.35s cubic-bezier(0.2, 1.5, 0.4, 1);
 }
 
 .fend-die-shadow {
@@ -194,4 +207,3 @@
     transform: scale(1) rotate(0);
   }
 }
-
