@@ -164,14 +164,12 @@ export default class PlexEngine {
     if (!path) return "";
     const url = new URL(path, `${this.plexUrl}/`);
     url.searchParams.set("X-Plex-Token", this.apiKey);
-    const authenticatedUrl = url.toString();
 
     if (!this._bypassProxy && context?.signProxyUrl) {
-      const proxyUrl = context.signProxyUrl(authenticatedUrl);
-      return proxyUrl;
+      return context.signProxyUrl(url.toString());
     }
 
-    return authenticatedUrl;
+    return url.toString();
   }
 
   /**
@@ -228,11 +226,14 @@ export default class PlexEngine {
         h = Math.floor(dur / 3600),
         m = Math.floor((dur % 3600) / 60),
         s = dur % 60;
+
       result.duration = [
         h > 0 ? String(h).padStart(2, "0") : "",
         String(m).padStart(2, "0"),
         String(s).padStart(2, "0"),
-      ].join(":");
+      ]
+        .filter(Boolean)
+        .join(":");
     }
 
     return result;
