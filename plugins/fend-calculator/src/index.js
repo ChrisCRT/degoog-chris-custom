@@ -21,17 +21,9 @@ const _loadFend = async () => {
   return fendInitPromise;
 };
 
-const _normalise = (expr) => {
-  let input = String(expr || "")
-    .trim()
-    .toLowerCase();
-  if (!input) return "";
-  input = _parseLanguage(input);
-  return input.endsWith("=") ? input.slice(0, -1).trim() : input;
-};
-
 const _parseLanguage = (query) => {
-  let expr = query
+  let expr = String(query || "")
+    .toLowerCase()
     .replace(
       /^(please\s+)?(calculate|compute|convert|evaluate|work out)\s+/i,
       "",
@@ -60,6 +52,8 @@ const _parseLanguage = (query) => {
     .replace(/^(.+?)\s+factorial$/i, "$1!")
     .replace(/^(.+?)\s+percent\s+of\s+(.+)$/i, "$1% of $2")
     .replace(/\bdecimal\s+places?\b/gi, "dp");
+
+  expr = expr.endsWith("=") ? expr.slice(0, -1).trim() : expr;
 
   return { type: "calc", expression: expr, raw: query };
 };
@@ -184,13 +178,13 @@ export const slot = {
     if (!fendEnabled || query.length > MAX_EXPR_LEN) return false;
     const intent = _parseLanguage(query);
     if (!intent?.expression) return false;
-    const out = await _evaluate(query, 250);
+    const out = await _evaluate(intent.expression, 250);
     return out.ok;
   },
 
   async execute(query) {
     const intent = _parseLanguage(query);
-    const out = await _evaluate(query);
+    const out = await _evaluate(intent.expression);
     return { html: _calcHtml(intent, out.ok ? out.result : "") };
   },
 };
@@ -224,7 +218,7 @@ export const command = {
       };
     }
 
-    const out = await _evaluate(args);
+    const out = await _evaluate(intent.expression);
     if (!out.ok) {
       return {
         title: "Fend",
@@ -247,14 +241,15 @@ export const routes = [
     path: "/eval",
     handler: async (req) => {
       if (!fendEnabled) return _json({ ok: false, error: "disabled" }, 403);
-
-      const expr = _normalise(new URL(req.url).searchParams.get("expr") || "");
-      if (!expr) return _json({ ok: false, error: "empty" }, 400);
-      if (expr.length > MAX_EXPR_LEN) {
+      if (req.length > MAX_EXPR_LEN) {
         return _json({ ok: false, error: "too-long" }, 400);
       }
 
-      const out = await _evaluate(expr);
+      const expr = _parseLanguage(
+        new URL(req.url).searchParams.get("expr") || "",
+      );
+      if (!expr) return _json({ ok: false, error: "empty" }, 400);
+      const out = await _evaluate(expr.expression);
       return _json(out);
     },
   },

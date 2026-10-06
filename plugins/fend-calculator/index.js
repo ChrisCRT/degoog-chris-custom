@@ -571,16 +571,10 @@ var _loadFend = async () => {
   }
   return fendInitPromise;
 };
-var _normalise = (expr) => {
-  let input = String(expr || "").trim().toLowerCase();
-  if (!input)
-    return "";
-  input = _parseLanguage(input);
-  return input.endsWith("=") ? input.slice(0, -1).trim() : input;
-};
 var _parseLanguage = (query) => {
-  let expr = query.replace(/^(please\s+)?(calculate|compute|convert|evaluate|work out)\s+/i, "").replace(/^(what(?:'s| is)\s+)/i, "").replace(/\?+$/, "").trim();
+  let expr = String(query || "").toLowerCase().replace(/^(please\s+)?(calculate|compute|convert|evaluate|work out)\s+/i, "").replace(/^(what(?:'s| is)\s+)/i, "").replace(/\?+$/, "").trim();
   expr.replace(/^(.+?)\s+plus\s+(.+)$/i, "$1 + $2").replace(/^(.+?)\s+minus\s+(.+)$/i, "$1 - $2").replace(/^(.+?)\s+(?:times|multiplied\s+by)\s+(.+)$/i, "$1 * $2").replace(/^(.+?)\s+(?:divided\s+by|over)\s+(.+)$/i, "$1 / $2").replace(/^square\s+root\s+of\s+(.+)$/i, "sqrt($1)").replace(/^cube\s+root\s+of\s+(.+)$/i, "cbrt($1)").replace(/^(.+?)\s+squared$/i, "($1)^2").replace(/^(.+?)\s+cubed$/i, "($1)^3").replace(/^(.+?)\s+to\s+the\s+power\s+of\s+(.+)$/i, "$1^($2)").replace(/^sine\s+of\s+(.+)$/i, "sin($1)").replace(/^cosine\s+of\s+(.+)$/i, "cos($1)").replace(/^tangent\s+of\s+(.+)$/i, "tan($1)").replace(/^natural\s+log(?:arithm)?\s+of\s+(.+)$/i, "ln($1)").replace(/^log(?:arithm)?\s+of\s+(.+)$/i, "log($1)").replace(/^log(?:arithm)?\s+base\s+2\s+of\s+(.+)$/i, "log2($1)").replace(/^absolute\s+value\s+of\s+(.+)$/i, "abs($1)").replace(/^(.+?)\s+factorial$/i, "$1!").replace(/^(.+?)\s+percent\s+of\s+(.+)$/i, "$1% of $2").replace(/\bdecimal\s+places?\b/gi, "dp");
+  expr = expr.endsWith("=") ? expr.slice(0, -1).trim() : expr;
   return { type: "calc", expression: expr, raw: query };
 };
 var _isNoCacheExpression = (type) => {
@@ -685,12 +679,12 @@ var slot = {
     const intent = _parseLanguage(query);
     if (!intent?.expression)
       return false;
-    const out = await _evaluate(query, 250);
+    const out = await _evaluate(intent.expression, 250);
     return out.ok;
   },
   async execute(query) {
     const intent = _parseLanguage(query);
-    const out = await _evaluate(query);
+    const out = await _evaluate(intent.expression);
     return { html: _calcHtml(intent, out.ok ? out.result : "") };
   }
 };
@@ -717,7 +711,7 @@ var command = {
         html: `<div class="command-result"><p>Usage: <code>!fend &lt;expression&gt;</code></p></div>`
       };
     }
-    const out = await _evaluate(args);
+    const out = await _evaluate(intent.expression);
     if (!out.ok) {
       return {
         title: "Fend",
@@ -739,13 +733,13 @@ var routes = [
     handler: async (req) => {
       if (!fendEnabled)
         return _json({ ok: false, error: "disabled" }, 403);
-      const expr = _normalise(new URL(req.url).searchParams.get("expr") || "");
-      if (!expr)
-        return _json({ ok: false, error: "empty" }, 400);
-      if (expr.length > MAX_EXPR_LEN) {
+      if (req.length > MAX_EXPR_LEN) {
         return _json({ ok: false, error: "too-long" }, 400);
       }
-      const out = await _evaluate(expr);
+      const expr = _parseLanguage(new URL(req.url).searchParams.get("expr") || "");
+      if (!expr)
+        return _json({ ok: false, error: "empty" }, 400);
+      const out = await _evaluate(expr.expression);
       return _json(out);
     }
   }
