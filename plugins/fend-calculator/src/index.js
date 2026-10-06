@@ -32,7 +32,7 @@ const _parseLanguage = (query) => {
     .replace(/\?+$/, "")
     .trim();
 
-  expr
+  expr = expr
     .replace(/^(.+?)\s+plus\s+(.+)$/i, "$1 + $2")
     .replace(/^(.+?)\s+minus\s+(.+)$/i, "$1 - $2")
     .replace(/^(.+?)\s+(?:times|multiplied\s+by)\s+(.+)$/i, "$1 * $2")
