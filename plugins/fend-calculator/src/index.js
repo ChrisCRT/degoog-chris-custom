@@ -1,27 +1,117 @@
 import * as fendModule from "fend-wasm-web";
+import { initCurrency, fetchCurrencyRates } from "./currency";
 
+let fendEnabled = true;
+let doFetch = null;
 let fendInitPromise = null;
 let evalCache = null;
-let fendEnabled = true;
 
 const MAX_EXPR_LEN = 300;
 const EVAL_TIMEOUT = 500;
 
-const CALC_KEYS = [
-  ["C", "(", ")", "back"],
-  ["7", "8", "9", "/"],
-  ["4", "5", "6", "*"],
-  ["1", "2", "3", "-"],
-  ["0", ".", "^", "+"],
-  ["sqrt(", "%", ",", "="],
-];
+const _loadFend = async () => {
+  if (!fendInitPromise) {
+    fendInitPromise = (async () => {
+      if (typeof fendModule.default === "function") await fendModule.default();
+      const currencyData = await fetchCurrencyRates(doFetch);
+      fendModule.initialiseWithHandlers(currencyData);
+      return fendModule;
+    })();
+  }
+  return fendInitPromise;
+};
 
-const KEY_LABEL = {
-  "/": "÷",
-  "*": "×",
-  "-": "−",
-  "sqrt(": "√",
-  back: "⌫",
+const _normalise = (expr) => {
+  let input = String(expr || "")
+    .trim()
+    .toLowerCase();
+  if (!input) return "";
+  input = _parseLanguage(input);
+  return input.endsWith("=") ? input.slice(0, -1).trim() : input;
+};
+
+const _parseLanguage = (query) => {
+  let expr = query
+    .replace(
+      /^(please\s+)?(calculate|compute|convert|evaluate|work out)\s+/i,
+      "",
+    )
+    .replace(/^(what(?:'s| is)\s+)/i, "")
+    .replace(/\?+$/, "")
+    .trim();
+
+  expr
+    .replace(/^(.+?)\s+plus\s+(.+)$/i, "$1 + $2")
+    .replace(/^(.+?)\s+minus\s+(.+)$/i, "$1 - $2")
+    .replace(/^(.+?)\s+(?:times|multiplied\s+by)\s+(.+)$/i, "$1 * $2")
+    .replace(/^(.+?)\s+(?:divided\s+by|over)\s+(.+)$/i, "$1 / $2")
+    .replace(/^square\s+root\s+of\s+(.+)$/i, "sqrt($1)")
+    .replace(/^cube\s+root\s+of\s+(.+)$/i, "cbrt($1)")
+    .replace(/^(.+?)\s+squared$/i, "($1)^2")
+    .replace(/^(.+?)\s+cubed$/i, "($1)^3")
+    .replace(/^(.+?)\s+to\s+the\s+power\s+of\s+(.+)$/i, "$1^($2)")
+    .replace(/^sine\s+of\s+(.+)$/i, "sin($1)")
+    .replace(/^cosine\s+of\s+(.+)$/i, "cos($1)")
+    .replace(/^tangent\s+of\s+(.+)$/i, "tan($1)")
+    .replace(/^natural\s+log(?:arithm)?\s+of\s+(.+)$/i, "ln($1)")
+    .replace(/^log(?:arithm)?\s+of\s+(.+)$/i, "log($1)")
+    .replace(/^log(?:arithm)?\s+base\s+2\s+of\s+(.+)$/i, "log2($1)")
+    .replace(/^absolute\s+value\s+of\s+(.+)$/i, "abs($1)")
+    .replace(/^(.+?)\s+factorial$/i, "$1!")
+    .replace(/^(.+?)\s+percent\s+of\s+(.+)$/i, "$1% of $2")
+    .replace(/\bdecimal\s+places?\b/gi, "dp");
+
+  return { type: "calc", expression: expr, raw: query };
+};
+
+const _isNoCacheExpression = (type) => {
+  switch (type) {
+    case "roll":
+    case "sample":
+    case "now":
+    case "today":
+    case "tomorrow":
+      return true;
+    default:
+      return false;
+  }
+};
+
+const _evaluate = async (query, timeout = EVAL_TIMEOUT) => {
+  if (query.length > MAX_EXPR_LEN) return { ok: false, result: "" };
+  const intent = _parseLanguage(query);
+  const expr = intent.expression;
+  const isNoCache = _isNoCacheExpression(intent.type);
+  if (!expr) return { ok: false, result: "" };
+
+  try {
+    if (!isNoCache) {
+      const cached = await evalCache.get(expr);
+      if (cached !== undefined && cached !== null) return cached;
+    }
+
+    const fend = await _loadFend();
+    const result = fend.evaluateFendWithTimeout(expr, timeout);
+    if (typeof result !== "string" || !result) {
+      return { ok: false, result: "", error: "Fend evaluation failed" };
+    }
+    if (result.startsWith("Error:")) {
+      return { ok: false, result: "", error: result.trim() };
+    }
+
+    const out = { ok: true, result };
+    if (!isNoCache) {
+      await evalCache.set(expr, out);
+    }
+    return out;
+  } catch (err) {
+    console.error("[fend-calculator] Fend evaluation failed:", err);
+    return {
+      ok: false,
+      result: "",
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
 };
 
 const _esc = (s) => {
@@ -34,128 +124,12 @@ const _esc = (s) => {
     .replace(/'/g, "&#039;");
 };
 
-const CALC_KEYS_HTML = CALC_KEYS.map((row) => {
-  const keys = row
-    .map((k) => {
-      const label = KEY_LABEL[k] ?? k;
-      const cls =
-        k === "="
-          ? "fend-calc-key fend-calc-eq"
-          : k === "C" || k === "back"
-            ? "fend-calc-key fend-calc-fn"
-            : "fend-calc-key";
-      return `<button type="button" class="${cls}" data-k="${_esc(k)}">${_esc(label)}</button>`;
-    })
-    .join("");
-  return `<div class="fend-calc-row">${keys}</div>`;
-}).join("");
-
-const _loadFend = async () => {
-  if (!fendInitPromise) {
-    fendInitPromise = (async () => {
-      if (typeof fendModule.default === "function") await fendModule.default();
-      return fendModule;
-    })();
-  }
-  return fendInitPromise;
-};
-
-const _normalise = (expr) => {
-  let input = String(expr || "").trim();
-  if (!input) return "";
-  input = _naturalLanguage(input);
-  return input.endsWith("=") ? input.slice(0, -1).trim() : input;
-};
-
-const _naturalLanguage = (query) => {
-  let s = String(query || "")
-    .trim()
-    .toLowerCase();
-
-  s = s
-    .replace(
-      /^(please\s+)?(calculate|compute|convert|evaluate|work out)\s+/i,
-      "",
-    )
-    .replace(/^(what(?:'s| is)\s+)/i, "")
-    .replace(/\?+$/, "")
-    .trim();
-
-  s = s.replace(/^(.+?)\s+plus\s+(.+)$/i, "$1 + $2");
-  s = s.replace(/^(.+?)\s+minus\s+(.+)$/i, "$1 - $2");
-  s = s.replace(/^(.+?)\s+(?:times|multiplied\s+by)\s+(.+)$/i, "$1 * $2");
-  s = s.replace(/^(.+?)\s+(?:divided\s+by|over)\s+(.+)$/i, "$1 / $2");
-
-  // square root
-  s = s.replace(/^square\s+root\s+of\s+(.+)$/i, "sqrt($1)");
-
-  // cube root
-  s = s.replace(/^cube\s+root\s+of\s+(.+)$/i, "cbrt($1)");
-
-  // powers
-  s = s.replace(/^(.+?)\s+squared$/i, "($1)^2");
-  s = s.replace(/^(.+?)\s+cubed$/i, "($1)^3");
-  s = s.replace(/^(.+?)\s+to\s+the\s+power\s+of\s+(.+)$/i, "$1^($2)");
-
-  // trig
-  s = s.replace(/^sine\s+of\s+(.+)$/i, "sin($1)");
-  s = s.replace(/^cosine\s+of\s+(.+)$/i, "cos($1)");
-  s = s.replace(/^tangent\s+of\s+(.+)$/i, "tan($1)");
-
-  // log
-  s = s.replace(/^natural\s+log(?:arithm)?\s+of\s+(.+)$/i, "ln($1)");
-  s = s.replace(/^log(?:arithm)?\s+of\s+(.+)$/i, "log($1)");
-  s = s.replace(/^log(?:arithm)?\s+base\s+2\s+of\s+(.+)$/i, "log2($1)");
-
-  // absolute
-  s = s.replace(/^absolute\s+value\s+of\s+(.+)$/i, "abs($1)");
-
-  // factorial
-  s = s.replace(/^(.+?)\s+factorial$/i, "$1!");
-
-  // percent
-  s = s.replace(/^(.+?)\s+percent\s+of\s+(.+)$/i, "$1% of $2");
-
-  // decimal places
-  s = s.replace(/\bdecimal\s+places?\b/gi, "dp");
-
-  return s;
-};
-
-const _evaluate = async (expr, timeout = EVAL_TIMEOUT) => {
-  if (!expr || expr.length > MAX_EXPR_LEN) return { ok: false, result: "" };
-
-  try {
-    const cached = await evalCache.get(expr);
-    if (cached !== undefined && cached !== null) return cached;
-
-    const fend = await _loadFend();
-    const result = fend.evaluateFendWithTimeout(expr, timeout);
-    if (typeof result !== "string" || !result) return { ok: false, result: "" };
-    if (result.startsWith("Error:")) {
-      return { ok: false, result: "", error: result.trim() };
-    }
-
-    const out = { ok: true, result };
-    await evalCache.set(expr, out);
-    return out;
-  } catch (err) {
-    console.error("[fend-calculator] Fend evaluation failed:", err);
-    return {
-      ok: false,
-      result: "",
-      error: err instanceof Error ? err.message : String(err),
-    };
-  }
-};
-
-const _calcHtml = (expr, result) => {
+const _calcHtml = (intent, result) => {
   return `<div class="fend-calc" data-fend-calc>
               <div class="fend-calc-screen">
-                <input id="fend-calc-expression" name="expression" class="fend-calc-expr" type="text" value="${_esc(expr)}" spellcheck="false" autocomplete="off" />
+                <input id="fend-calc-expression" name="expression" class="fend-calc-expr" type="text" value="${_esc(intent.expression)}" spellcheck="false" autocomplete="off" />
                 <div class="fend-calc-result">${result ? `= ${_esc(result)}` : ""}</div>
               </div>
-              <div class="fend-calc-keys">${CALC_KEYS_HTML}</div>
           </div>`;
 };
 
@@ -168,6 +142,11 @@ const _json = (body, status = 200) => {
 
 const _init = (ctx) => {
   evalCache = ctx.useCache("fend-eval", 30_000);
+
+  const currencyCache = ctx.useCache("fend-currency-rates", 259_200_000);
+  initCurrency(currencyCache);
+
+  doFetch = ctx.fetch ?? fetch;
 };
 
 const _configure = (settings) => {
@@ -202,17 +181,17 @@ export const slot = {
   configure: _configure,
 
   async trigger(query) {
-    if (!fendEnabled) return false;
-    const expr = _normalise(query);
-    if (!expr || expr.length > MAX_EXPR_LEN) return false;
-    const out = await _evaluate(expr, 250);
+    if (!fendEnabled || query.length > MAX_EXPR_LEN) return false;
+    const intent = _parseLanguage(query);
+    if (!intent?.expression) return false;
+    const out = await _evaluate(query, 250);
     return out.ok;
   },
 
   async execute(query) {
-    const expr = _normalise(query);
-    const out = await _evaluate(expr);
-    return { html: _calcHtml(expr, out.ok ? out.result : "") };
+    const intent = _parseLanguage(query);
+    const out = await _evaluate(query);
+    return { html: _calcHtml(intent, out.ok ? out.result : "") };
   },
 };
 
@@ -237,31 +216,27 @@ export const command = {
       };
     }
 
-    const expr = _normalise(args);
-    if (!expr) {
+    const intent = _parseLanguage(args);
+    if (!intent?.expression) {
       return {
         title: "Fend",
         html: `<div class="command-result"><p>Usage: <code>!fend &lt;expression&gt;</code></p></div>`,
       };
     }
 
-    const out = await _evaluate(expr);
+    const out = await _evaluate(args);
     if (!out.ok) {
       return {
         title: "Fend",
         html: `<div class="command-result">
-                  <p>Could not evaluate <code>${_esc(expr)}</code></p>
+                  <p>Could not evaluate <code>${_esc(intent.expression)}</code></p>
               </div>`,
       };
     }
 
     return {
-      title: `Fend: ${expr}`,
-      html: `<div class="command-result">
-                <div class="fend-query">${_esc(expr)}</div>
-                <div class="fend-equals">=</div>
-                <div class="fend-result">${_esc(out.result)}</div>
-            </div>`,
+      title: `Fend: ${intent.expression}`,
+      html: _calcHtml(intent),
     };
   },
 };

@@ -418,97 +418,209 @@ async function __wbg_init(module_or_path) {
   return __wbg_finalize_init(instance, module);
 }
 
+// src/currency.js
+var ECB_RATES_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
+var UN_RATES_URL = "https://treasury.un.org/operationalrates/xsql2XML.php";
+var currencyCache = null;
+var currencyRatePromise = null;
+var initCurrency = (cache) => {
+  currencyCache = cache;
+};
+var _parseEcbRates = (xml) => {
+  const rates = new Map([["EUR", 1]]);
+  for (const line of xml.split(/\r?\n/)) {
+    const l = line.trim();
+    if (!l.startsWith("<Cube currency="))
+      continue;
+    const match = l.match(/^<Cube currency='([A-Z]{3})' rate='([^']+)'/);
+    if (!match)
+      continue;
+    const [, currency, rateString] = match;
+    const rate = Number.parseFloat(rateString);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new Error(`Invalid ECB exchange rate for ${currency}`);
+    }
+    rates.set(currency, rate);
+  }
+  if (rates.size < 10) {
+    throw new Error("ECB exchange-rate response contained too few currencies");
+  }
+  return rates;
+};
+var _parseUnRates = (xml) => {
+  const rates = new Map([["USD", 1]]);
+  const start = xml.indexOf("<UN_OPERATIONAL_RATES>");
+  if (start === -1) {
+    throw new Error("UN exchange-rate response has no operational rates");
+  }
+  let data = xml.slice(start);
+  while (data.length > 0) {
+    const currencyStart = data.indexOf("<f_curr_code>");
+    if (currencyStart === -1)
+      break;
+    data = data.slice(currencyStart + "<f_curr_code>".length);
+    const currencyEnd = data.indexOf("</f_curr_code>");
+    if (currencyEnd === -1) {
+      throw new Error("Malformed UN currency code");
+    }
+    const currency = data.slice(0, currencyEnd).trim();
+    data = data.slice(currencyEnd + "</f_curr_code>".length);
+    const rateStart = data.indexOf("<rate>");
+    if (rateStart === -1) {
+      throw new Error(`Missing UN rate for ${currency}`);
+    }
+    data = data.slice(rateStart + "<rate>".length);
+    const rateEnd = data.indexOf("</rate>");
+    if (rateEnd === -1) {
+      throw new Error(`Malformed UN rate for ${currency}`);
+    }
+    const rateString = data.slice(0, rateEnd).trim();
+    const rate = Number.parseFloat(rateString);
+    data = data.slice(rateEnd + "</rate>".length);
+    if (!/^[A-Z]{3}$/.test(currency))
+      continue;
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new Error(`Invalid UN exchange rate for ${currency}`);
+    }
+    rates.set(currency, rate);
+  }
+  if (rates.size < 2) {
+    throw new Error("UN exchange-rate response contained no currencies");
+  }
+  return rates;
+};
+var _normalizeToUsd = (rates, sourceBase) => {
+  const baseToUsd = rates.get("USD");
+  if (sourceBase === "USD") {
+    return rates;
+  }
+  if (!Number.isFinite(baseToUsd) || baseToUsd <= 0) {
+    throw new Error("Exchange-rate source does not provide USD");
+  }
+  const normalized = new Map;
+  for (const [currency, rate] of rates) {
+    if (!Number.isFinite(rate) || rate <= 0)
+      continue;
+    normalized.set(currency, baseToUsd / rate);
+  }
+  normalized.set("USD", 1);
+  return normalized;
+};
+var _fetchEcbRates = async (doFetch) => {
+  const response = await doFetch(ECB_RATES_URL);
+  if (!response.ok) {
+    throw new Error(`ECB request failed: HTTP ${response.status}`);
+  }
+  const xml = await response.text();
+  return _normalizeToUsd(_parseEcbRates(xml), "EUR");
+};
+var _fetchUnRates = async (doFetch) => {
+  const response = await doFetch(UN_RATES_URL);
+  if (!response.ok) {
+    throw new Error(`UN Treasury request failed: HTTP ${response.status}`);
+  }
+  const xml = await response.text();
+  return _parseUnRates(xml);
+};
+var fetchCurrencyRates = async (doFetch) => {
+  if (!currencyCache) {
+    throw new Error("Currency system has not been initialized");
+  }
+  const cached = await currencyCache.get("rates");
+  if (cached !== undefined && cached !== null) {
+    return new Map(Object.entries(cached));
+  }
+  if (currencyRatePromise) {
+    return currencyRatePromise;
+  }
+  currencyRatePromise = (async () => {
+    try {
+      try {
+        const rates = await _fetchEcbRates(doFetch);
+        await currencyCache.set("rates", Object.fromEntries(rates));
+        return rates;
+      } catch (ecbError) {
+        console.warn("[fend-calculator] ECB exchange rates failed; trying UN Treasury:", ecbError);
+      }
+      const rates = await _fetchUnRates(doFetch);
+      await currencyCache.set("rates", Object.fromEntries(rates));
+      return rates;
+    } finally {
+      currencyRatePromise = null;
+    }
+  })();
+  return currencyRatePromise;
+};
+
 // src/index.js
+var fendEnabled = true;
+var doFetch = null;
 var fendInitPromise = null;
 var evalCache = null;
-var fendEnabled = true;
 var MAX_EXPR_LEN = 300;
 var EVAL_TIMEOUT = 500;
-var CALC_KEYS = [
-  ["C", "(", ")", "back"],
-  ["7", "8", "9", "/"],
-  ["4", "5", "6", "*"],
-  ["1", "2", "3", "-"],
-  ["0", ".", "^", "+"],
-  ["sqrt(", "%", ",", "="]
-];
-var KEY_LABEL = {
-  "/": "\xF7",
-  "*": "\xD7",
-  "-": "\u2212",
-  "sqrt(": "\u221A",
-  back: "\u232B"
-};
-var _esc = (s) => {
-  if (typeof s !== "string")
-    return "";
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-};
-var CALC_KEYS_HTML = CALC_KEYS.map((row) => {
-  const keys = row.map((k) => {
-    const label = KEY_LABEL[k] ?? k;
-    const cls = k === "=" ? "fend-calc-key fend-calc-eq" : k === "C" || k === "back" ? "fend-calc-key fend-calc-fn" : "fend-calc-key";
-    return `<button type="button" class="${cls}" data-k="${_esc(k)}">${_esc(label)}</button>`;
-  }).join("");
-  return `<div class="fend-calc-row">${keys}</div>`;
-}).join("");
 var _loadFend = async () => {
   if (!fendInitPromise) {
     fendInitPromise = (async () => {
       if (typeof __wbg_init === "function")
         await __wbg_init();
+      const currencyData = await fetchCurrencyRates(doFetch);
+      initialiseWithHandlers(currencyData);
       return exports_fend_wasm;
     })();
   }
   return fendInitPromise;
 };
 var _normalise = (expr) => {
-  let input = String(expr || "").trim();
+  let input = String(expr || "").trim().toLowerCase();
   if (!input)
     return "";
-  input = _naturalLanguage(input);
+  input = _parseLanguage(input);
   return input.endsWith("=") ? input.slice(0, -1).trim() : input;
 };
-var _naturalLanguage = (query) => {
-  let s = String(query || "").trim().toLowerCase();
-  s = s.replace(/^(please\s+)?(calculate|compute|convert|evaluate|work out)\s+/i, "").replace(/^(what(?:'s| is)\s+)/i, "").replace(/\?+$/, "").trim();
-  s = s.replace(/^(.+?)\s+plus\s+(.+)$/i, "$1 + $2");
-  s = s.replace(/^(.+?)\s+minus\s+(.+)$/i, "$1 - $2");
-  s = s.replace(/^(.+?)\s+(?:times|multiplied\s+by)\s+(.+)$/i, "$1 * $2");
-  s = s.replace(/^(.+?)\s+(?:divided\s+by|over)\s+(.+)$/i, "$1 / $2");
-  s = s.replace(/^square\s+root\s+of\s+(.+)$/i, "sqrt($1)");
-  s = s.replace(/^cube\s+root\s+of\s+(.+)$/i, "cbrt($1)");
-  s = s.replace(/^(.+?)\s+squared$/i, "($1)^2");
-  s = s.replace(/^(.+?)\s+cubed$/i, "($1)^3");
-  s = s.replace(/^(.+?)\s+to\s+the\s+power\s+of\s+(.+)$/i, "$1^($2)");
-  s = s.replace(/^sine\s+of\s+(.+)$/i, "sin($1)");
-  s = s.replace(/^cosine\s+of\s+(.+)$/i, "cos($1)");
-  s = s.replace(/^tangent\s+of\s+(.+)$/i, "tan($1)");
-  s = s.replace(/^natural\s+log(?:arithm)?\s+of\s+(.+)$/i, "ln($1)");
-  s = s.replace(/^log(?:arithm)?\s+of\s+(.+)$/i, "log($1)");
-  s = s.replace(/^log(?:arithm)?\s+base\s+2\s+of\s+(.+)$/i, "log2($1)");
-  s = s.replace(/^absolute\s+value\s+of\s+(.+)$/i, "abs($1)");
-  s = s.replace(/^(.+?)\s+factorial$/i, "$1!");
-  s = s.replace(/^(.+?)\s+percent\s+of\s+(.+)$/i, "$1% of $2");
-  s = s.replace(/\bdecimal\s+places?\b/gi, "dp");
-  return s;
+var _parseLanguage = (query) => {
+  let expr = query.replace(/^(please\s+)?(calculate|compute|convert|evaluate|work out)\s+/i, "").replace(/^(what(?:'s| is)\s+)/i, "").replace(/\?+$/, "").trim();
+  expr.replace(/^(.+?)\s+plus\s+(.+)$/i, "$1 + $2").replace(/^(.+?)\s+minus\s+(.+)$/i, "$1 - $2").replace(/^(.+?)\s+(?:times|multiplied\s+by)\s+(.+)$/i, "$1 * $2").replace(/^(.+?)\s+(?:divided\s+by|over)\s+(.+)$/i, "$1 / $2").replace(/^square\s+root\s+of\s+(.+)$/i, "sqrt($1)").replace(/^cube\s+root\s+of\s+(.+)$/i, "cbrt($1)").replace(/^(.+?)\s+squared$/i, "($1)^2").replace(/^(.+?)\s+cubed$/i, "($1)^3").replace(/^(.+?)\s+to\s+the\s+power\s+of\s+(.+)$/i, "$1^($2)").replace(/^sine\s+of\s+(.+)$/i, "sin($1)").replace(/^cosine\s+of\s+(.+)$/i, "cos($1)").replace(/^tangent\s+of\s+(.+)$/i, "tan($1)").replace(/^natural\s+log(?:arithm)?\s+of\s+(.+)$/i, "ln($1)").replace(/^log(?:arithm)?\s+of\s+(.+)$/i, "log($1)").replace(/^log(?:arithm)?\s+base\s+2\s+of\s+(.+)$/i, "log2($1)").replace(/^absolute\s+value\s+of\s+(.+)$/i, "abs($1)").replace(/^(.+?)\s+factorial$/i, "$1!").replace(/^(.+?)\s+percent\s+of\s+(.+)$/i, "$1% of $2").replace(/\bdecimal\s+places?\b/gi, "dp");
+  return { type: "calc", expression: expr, raw: query };
 };
-var _evaluate = async (expr, timeout = EVAL_TIMEOUT) => {
-  if (!expr || expr.length > MAX_EXPR_LEN)
+var _isNoCacheExpression = (type) => {
+  switch (type) {
+    case "roll":
+    case "sample":
+    case "now":
+    case "today":
+    case "tomorrow":
+      return true;
+    default:
+      return false;
+  }
+};
+var _evaluate = async (query, timeout = EVAL_TIMEOUT) => {
+  if (query.length > MAX_EXPR_LEN)
+    return { ok: false, result: "" };
+  const intent = _parseLanguage(query);
+  const expr = intent.expression;
+  const isNoCache = _isNoCacheExpression(intent.type);
+  if (!expr)
     return { ok: false, result: "" };
   try {
-    const cached = await evalCache.get(expr);
-    if (cached !== undefined && cached !== null)
-      return cached;
+    if (!isNoCache) {
+      const cached = await evalCache.get(expr);
+      if (cached !== undefined && cached !== null)
+        return cached;
+    }
     const fend = await _loadFend();
     const result = fend.evaluateFendWithTimeout(expr, timeout);
-    if (typeof result !== "string" || !result)
-      return { ok: false, result: "" };
+    if (typeof result !== "string" || !result) {
+      return { ok: false, result: "", error: "Fend evaluation failed" };
+    }
     if (result.startsWith("Error:")) {
       return { ok: false, result: "", error: result.trim() };
     }
     const out = { ok: true, result };
-    await evalCache.set(expr, out);
+    if (!isNoCache) {
+      await evalCache.set(expr, out);
+    }
     return out;
   } catch (err) {
     console.error("[fend-calculator] Fend evaluation failed:", err);
@@ -519,13 +631,17 @@ var _evaluate = async (expr, timeout = EVAL_TIMEOUT) => {
     };
   }
 };
-var _calcHtml = (expr, result) => {
+var _esc = (s) => {
+  if (typeof s !== "string")
+    return "";
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+};
+var _calcHtml = (intent, result) => {
   return `<div class="fend-calc" data-fend-calc>
               <div class="fend-calc-screen">
-                <input id="fend-calc-expression" name="expression" class="fend-calc-expr" type="text" value="${_esc(expr)}" spellcheck="false" autocomplete="off" />
+                <input id="fend-calc-expression" name="expression" class="fend-calc-expr" type="text" value="${_esc(intent.expression)}" spellcheck="false" autocomplete="off" />
                 <div class="fend-calc-result">${result ? `= ${_esc(result)}` : ""}</div>
               </div>
-              <div class="fend-calc-keys">${CALC_KEYS_HTML}</div>
           </div>`;
 };
 var _json = (body, status = 200) => {
@@ -536,6 +652,9 @@ var _json = (body, status = 200) => {
 };
 var _init = (ctx) => {
   evalCache = ctx.useCache("fend-eval", 30000);
+  const currencyCache = ctx.useCache("fend-currency-rates", 259200000);
+  initCurrency(currencyCache);
+  doFetch = ctx.fetch ?? fetch;
 };
 var _configure = (settings) => {
   fendEnabled = settings?.enabled !== "false";
@@ -561,18 +680,18 @@ var slot = {
   init: _init,
   configure: _configure,
   async trigger(query) {
-    if (!fendEnabled)
+    if (!fendEnabled || query.length > MAX_EXPR_LEN)
       return false;
-    const expr = _normalise(query);
-    if (!expr || expr.length > MAX_EXPR_LEN)
+    const intent = _parseLanguage(query);
+    if (!intent?.expression)
       return false;
-    const out = await _evaluate(expr, 250);
+    const out = await _evaluate(query, 250);
     return out.ok;
   },
   async execute(query) {
-    const expr = _normalise(query);
-    const out = await _evaluate(expr);
-    return { html: _calcHtml(expr, out.ok ? out.result : "") };
+    const intent = _parseLanguage(query);
+    const out = await _evaluate(query);
+    return { html: _calcHtml(intent, out.ok ? out.result : "") };
   }
 };
 var command = {
@@ -591,29 +710,25 @@ var command = {
         html: `<div class="command-result"><p>Fend is disabled.</p></div>`
       };
     }
-    const expr = _normalise(args);
-    if (!expr) {
+    const intent = _parseLanguage(args);
+    if (!intent?.expression) {
       return {
         title: "Fend",
         html: `<div class="command-result"><p>Usage: <code>!fend &lt;expression&gt;</code></p></div>`
       };
     }
-    const out = await _evaluate(expr);
+    const out = await _evaluate(args);
     if (!out.ok) {
       return {
         title: "Fend",
         html: `<div class="command-result">
-                  <p>Could not evaluate <code>${_esc(expr)}</code></p>
+                  <p>Could not evaluate <code>${_esc(intent.expression)}</code></p>
               </div>`
       };
     }
     return {
-      title: `Fend: ${expr}`,
-      html: `<div class="command-result">
-                <div class="fend-query">${_esc(expr)}</div>
-                <div class="fend-equals">=</div>
-                <div class="fend-result">${_esc(out.result)}</div>
-            </div>`
+      title: `Fend: ${intent.expression}`,
+      html: _calcHtml(intent)
     };
   }
 };
