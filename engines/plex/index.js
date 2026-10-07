@@ -116,13 +116,13 @@ export default class PlexEngine {
    * @returns {string}
    */
   buildItemUrl(key) {
-    const key = encodeURIComponent(`${key}`);
+    const encodedKey = encodeURIComponent(`${key}`);
 
     if (this.urlMode === "plexWeb") {
-      return `https://app.plex.tv/desktop/#!/server/${this.machineId}/details?key=${key}`;
+      return `https://app.plex.tv/desktop/#!/server/${this.machineId}/details?key=${encodedKey}`;
     }
 
-    return `${this.plexUrl}/web/index.html#!/server/${this.machineId}/details?key=${key}`;
+    return `${this.plexUrl}/web/index.html#!/server/${this.machineId}/details?key=${encodedKey}`;
   }
 
   /**
