@@ -98,7 +98,7 @@ export default class PlexEngine {
     this.plexUrl = (settings.url || "").replace(/\/$/, "");
     this.apiKey = settings.apiKey || "";
     this._bypassProxy = settings.bypassProxy !== "false";
-    this.urlMode = settings.urlMode || "plex";
+    this.urlMode = settings.urlMode || "server";
     this.machineId = "";
   }
 
@@ -107,10 +107,24 @@ export default class PlexEngine {
    * @param {Function} doFetch
    */
   async fetchMachineId(headers, doFetch, context) {
-    const response = await doFetch(`${this.plexUrl}/identity`, { headers });
+    const response = await doFetch(`${this.plexUrl}/identity`, {
+      headers: {
+        ...headers,
+        Accept: "application/json",
+      },
+    });
     context?.sentinel?.(response, this.name);
+    if (!response.ok) {
+      throw new Error(`Plex identity request failed: ${response.status}`);
+    }
     const data = await response.json();
-    this.machineId = data?.MediaContainer?.machineIdentifier ?? "";
+    const machineId = data?.MediaContainer?.machineIdentifier;
+    if (!machineId) {
+      throw new Error(
+        "Plex identity response did not contain machineIdentifier",
+      );
+    }
+    this.machineId = machineId;
   }
 
   /**
@@ -118,7 +132,14 @@ export default class PlexEngine {
    * @returns {string}
    */
   buildItemUrl(ratingKey, type) {
-    if (!this.machineId) return this.plexUrl;
+    const machineId = encodeURIComponent(this.machineId);
+    const key = encodeURIComponent(`/library/metadata/${ratingKey}`);
+
+    if (this.urlMode === "plexWeb") {
+      return `https://app.plex.tv/desktop/#!/server/${machineId}/details?key=${key}`;
+    }
+
+    return `${this.plexUrl}/web/index.html#!/server/${machineId}/details?key=${key}`;
 
     /** plex:// doesnt work for some reason
      if (this.urlMode === "plexDesktop") {
@@ -147,12 +168,6 @@ export default class PlexEngine {
       )}`;
     }
     */
-
-    if (this.urlMode === "plexWeb") {
-      return `https://app.plex.tv/desktop/#!/server/${encodeURIComponent(this.machineId)}/details?key=${encodeURIComponent(`/library/metadata/${ratingKey}`)}`;
-    }
-
-    return `${this.plexUrl}/web/index.html#!/server/${this.machineId}/details?key=${encodeURIComponent(`/library/metadata/${ratingKey}`)}`;
   }
 
   /**
@@ -164,12 +179,14 @@ export default class PlexEngine {
     if (!path) return "";
     const url = new URL(path, `${this.plexUrl}/`);
     url.searchParams.set("X-Plex-Token", this.apiKey);
+    const authenticatedUrl = url.toString();
 
     if (!this._bypassProxy && context?.signProxyUrl) {
-      return context.signProxyUrl(url.toString());
+      const proxyUrl = context.signProxyUrl(authenticatedUrl);
+      return proxyUrl;
     }
 
-    return url.toString();
+    return authenticatedUrl;
   }
 
   /**
@@ -179,7 +196,7 @@ export default class PlexEngine {
    */
   normaliseResult(item, context) {
     const type = String(item.type || "");
-    let snippet = item.summary || "";
+    let snippet = String(item.summary || "");
 
     if (type === "episode") {
       const series = item.grandparentTitle || "";
@@ -243,16 +260,14 @@ export default class PlexEngine {
    * @param {{series: string, season: number, episode: number|null}} epQuery
    * @param {Record<string, string>} headers
    * @param {Function} doFetch
-   * @param {number} limit
-   * @param {number} startIndex
    * @param {object} context
    * @returns {Promise<object[]>}
    */
-  async findEpisode(epQuery, headers, doFetch, limit, startIndex, context) {
+  async findEpisode(epQuery, headers, doFetch, context) {
     const seriesVariants = searchVariants(epQuery.series);
     const seriesFetches = seriesVariants.map(async (variant) => {
       const response = await doFetch(
-        `${this.plexUrl}/search?query=${encodeURIComponent(variant)}&type=2&limit=5`,
+        `${this.plexUrl}/search?query=${encodeURIComponent(variant)}&type=2&limit=25`,
         { headers },
       );
       context?.sentinel?.(response, this.name);
@@ -275,7 +290,7 @@ export default class PlexEngine {
 
     const episodeFetches = allShows.map(async (show) => {
       const response = await doFetch(
-        `${this.plexUrl}/library/metadata/${show.ratingKey}/allLeaves?limit=${limit}&offset=${startIndex}`,
+        `${this.plexUrl}/library/metadata/${show.ratingKey}/allLeaves`,
         { headers },
       );
       context?.sentinel?.(response, this.name);
@@ -323,17 +338,12 @@ export default class PlexEngine {
       await this.fetchMachineId(headers, doFetch, context);
     }
 
-    const perPage = 25;
-    const startIndex = (page - 1) * perPage;
-
     const episodeQuery = parseEpisodeQuery(term);
     if (episodeQuery) {
       const episodeResults = await this.findEpisode(
         episodeQuery,
         headers,
         doFetch,
-        perPage,
-        startIndex,
         context,
       );
 
@@ -346,7 +356,7 @@ export default class PlexEngine {
 
     const fetches = variants.map(async (variant) => {
       const response = await doFetch(
-        `${this.plexUrl}/hubs/search?query=${encodeURIComponent(variant)}&limit=${perPage}`,
+        `${this.plexUrl}/hubs/search?query=${encodeURIComponent(variant)}&limit=25`,
         { headers },
       );
       context?.sentinel?.(response, this.name);
@@ -368,8 +378,6 @@ export default class PlexEngine {
       }
     }
 
-    const offset = startIndex;
-
-    return results.slice(offset, offset + perPage);
+    return results;
   }
 }
