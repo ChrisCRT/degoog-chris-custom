@@ -584,6 +584,7 @@ var fendEnabled = true;
 var doFetch = null;
 var fendInitPromise = null;
 var evalCache = null;
+var template = "";
 var MAX_EXPR_LEN = 300;
 var EVAL_TIMEOUT = 500;
 var _loadFend = async () => {
@@ -654,13 +655,12 @@ var _esc = (s) => {
     return "";
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 };
-var _calcHtml = (intent, result) => {
-  return `<div class="fend-calc" data-fend-calc>
-              <div class="fend-calc-screen">
-                <input id="fend-calc-expression" name="expression" class="fend-calc-expr" type="text" value="${_esc(intent.expression)}" spellcheck="false" autocomplete="off" />
-                <div class="fend-calc-result">${result ? `= ${_esc(result)}` : ""}</div>
-              </div>
-          </div>`;
+var _htmlTemplate = (values) => {
+  let html = template || FALLBACK_TEMPLATE;
+  Object.entries(values).forEach(([key, value]) => {
+    html = html.split(`{{${key}}}`).join(_esc(String(value ?? "")));
+  });
+  return html;
 };
 var _json = (body, status = 200) => {
   return new Response(JSON.stringify(body), {
@@ -669,6 +669,7 @@ var _json = (body, status = 200) => {
   });
 };
 var _init = (ctx) => {
+  template = ctx.template;
   evalCache = ctx.useCache("fend-eval", 30000);
   const currencyCache = ctx.useCache("fend-currency-rates", 259200000);
   initCurrency(currencyCache);
@@ -709,7 +710,12 @@ var slot = {
   async execute(query) {
     const intent = _parseLanguage(query);
     const out = await _evaluate(intent.expression);
-    return { html: _calcHtml(intent, out.ok ? out.result : "") };
+    return {
+      html: _htmlTemplate({
+        expression: intent.expression,
+        result: out.ok ? `= ${out.result}` : ""
+      })
+    };
   }
 };
 var command = {
@@ -725,14 +731,18 @@ var command = {
     if (!fendEnabled) {
       return {
         title: "Fend",
-        html: `<div class="command-result"><p>Fend is disabled.</p></div>`
+        html: `<div class="command-result">
+                  <p>Fend is disabled.</p>
+              </div>`
       };
     }
     const intent = _parseLanguage(args);
     if (!intent?.expression) {
       return {
         title: "Fend",
-        html: `<div class="command-result"><p>Usage: <code>!fend &lt;expression&gt;</code></p></div>`
+        html: `<div class="command-result">
+                  <p>Usage: <code>!fend &lt;expression&gt;</code></p>
+              </div>`
       };
     }
     const out = await _evaluate(intent.expression);
@@ -746,7 +756,10 @@ var command = {
     }
     return {
       title: `Fend: ${args}`,
-      html: _calcHtml(intent, out.result)
+      html: _htmlTemplate({
+        expression: intent.expression,
+        result: `= ${out.result}`
+      })
     };
   }
 };

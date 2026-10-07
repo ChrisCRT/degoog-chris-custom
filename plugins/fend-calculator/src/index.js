@@ -6,6 +6,7 @@ let fendEnabled = true;
 let doFetch = null;
 let fendInitPromise = null;
 let evalCache = null;
+let template = "";
 
 const MAX_EXPR_LEN = 300;
 const EVAL_TIMEOUT = 500;
@@ -115,13 +116,12 @@ const _esc = (s) => {
     .replace(/'/g, "&#039;");
 };
 
-const _calcHtml = (intent, result) => {
-  return `<div class="fend-calc" data-fend-calc>
-              <div class="fend-calc-screen">
-                <input id="fend-calc-expression" name="expression" class="fend-calc-expr" type="text" value="${_esc(intent.expression)}" spellcheck="false" autocomplete="off" />
-                <div class="fend-calc-result">${result ? `= ${_esc(result)}` : ""}</div>
-              </div>
-          </div>`;
+const _htmlTemplate = (values) => {
+  let html = template || FALLBACK_TEMPLATE;
+  Object.entries(values).forEach(([key, value]) => {
+    html = html.split(`{{${key}}}`).join(_esc(String(value ?? "")));
+  });
+  return html;
 };
 
 const _json = (body, status = 200) => {
@@ -132,11 +132,10 @@ const _json = (body, status = 200) => {
 };
 
 const _init = (ctx) => {
+  template = ctx.template;
   evalCache = ctx.useCache("fend-eval", 30_000);
-
   const currencyCache = ctx.useCache("fend-currency-rates", 259_200_000);
   initCurrency(currencyCache);
-
   doFetch = ctx.fetch ?? fetch;
 };
 
@@ -182,7 +181,12 @@ export const slot = {
   async execute(query) {
     const intent = _parseLanguage(query);
     const out = await _evaluate(intent.expression);
-    return { html: _calcHtml(intent, out.ok ? out.result : "") };
+    return {
+      html: _htmlTemplate({
+        expression: intent.expression,
+        result: out.ok ? `= ${out.result}` : "",
+      }),
+    };
   },
 };
 
@@ -203,7 +207,9 @@ export const command = {
     if (!fendEnabled) {
       return {
         title: "Fend",
-        html: `<div class="command-result"><p>Fend is disabled.</p></div>`,
+        html: `<div class="command-result">
+                  <p>Fend is disabled.</p>
+              </div>`,
       };
     }
 
@@ -211,7 +217,9 @@ export const command = {
     if (!intent?.expression) {
       return {
         title: "Fend",
-        html: `<div class="command-result"><p>Usage: <code>!fend &lt;expression&gt;</code></p></div>`,
+        html: `<div class="command-result">
+                  <p>Usage: <code>!fend &lt;expression&gt;</code></p>
+              </div>`,
       };
     }
 
@@ -227,7 +235,10 @@ export const command = {
 
     return {
       title: `Fend: ${args}`,
-      html: _calcHtml(intent, out.result),
+      html: _htmlTemplate({
+        expression: intent.expression,
+        result: `= ${out.result}`,
+      }),
     };
   },
 };

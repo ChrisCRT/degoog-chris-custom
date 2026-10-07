@@ -18,7 +18,10 @@ const EPISODE_PATTERNS = [
   /^(.+?)\s+(\d+)x(\d+)$/i,
 ];
 
-const SEASON_PATTERNS = [/^(.+?)\s+season\s+(\d+)$/i, /^(.+?)\s+s(\d+)$/i];
+const SEASON_PATTERNS = [
+  /^(.+?)\s+season\s+(\d+)$/i,
+   /^(.+?)\s+s(\d+)$/i,
+  ];
 
 /**
  * @param {string} term
