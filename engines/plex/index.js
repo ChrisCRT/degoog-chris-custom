@@ -75,14 +75,6 @@ export default class PlexEngine {
         "Guide to learn your token: https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/",
     },
     {
-      key: "bypassProxy",
-      label: "Bypass proxy",
-      type: "toggle",
-      default: "true",
-      description:
-        "Connect directly to the Plex Media Server instance instead of routing through the proxy. Enable this when Plex is on your local network.",
-    },
-    {
       key: "urlMode",
       label: "Open results with",
       type: "select",
@@ -92,12 +84,9 @@ export default class PlexEngine {
     },
   ];
 
-  _bypassProxy = true;
-
   configure(settings) {
     this.plexUrl = (settings.url || "").replace(/\/$/, "");
     this.apiKey = settings.apiKey || "";
-    this._bypassProxy = settings.bypassProxy !== "false";
     this.urlMode = settings.urlMode || "server";
     this.machineId = "";
   }
@@ -107,12 +96,7 @@ export default class PlexEngine {
    * @param {Function} doFetch
    */
   async fetchMachineId(headers, doFetch, context) {
-    const response = await doFetch(`${this.plexUrl}/identity`, {
-      headers: {
-        ...headers,
-        Accept: "application/json",
-      },
-    });
+    const response = await doFetch(`${this.plexUrl}/identity`, { headers });
     context?.sentinel?.(response, this.name);
     if (!response.ok) {
       throw new Error(`Plex identity request failed: ${response.status}`);
@@ -128,46 +112,17 @@ export default class PlexEngine {
   }
 
   /**
-   * @param {string} ratingKey
+   * @param {string} key
    * @returns {string}
    */
-  buildItemUrl(ratingKey, type) {
-    const machineId = encodeURIComponent(this.machineId);
-    const key = encodeURIComponent(`/library/metadata/${ratingKey}`);
+  buildItemUrl(key) {
+    const key = encodeURIComponent(`${key}`);
 
     if (this.urlMode === "plexWeb") {
-      return `https://app.plex.tv/desktop/#!/server/${machineId}/details?key=${key}`;
+      return `https://app.plex.tv/desktop/#!/server/${this.machineId}/details?key=${key}`;
     }
 
-    return `${this.plexUrl}/web/index.html#!/server/${machineId}/details?key=${key}`;
-
-    /** plex:// doesnt work for some reason
-     if (this.urlMode === "plexDesktop") {
-      let metadataType;
-      switch (type) {
-        case "movie":
-          metadataType = 1;
-          break;
-        case "show":
-          metadataType = 2;
-          break;
-        case "season":
-          metadataType = 3;
-          break;
-        case "episode":
-          metadataType = 4;
-          break;
-        default:
-          metadataType = 1;
-      }
-
-      return `plex://preplay/?metadataKey=${encodeURIComponent(
-        `/library/metadata/${ratingKey}`,
-      )}&metadataType=${metadataType}&server=${encodeURIComponent(
-        this.machineId,
-      )}`;
-    }
-    */
+    return `${this.plexUrl}/web/index.html#!/server/${this.machineId}/details?key=${key}`;
   }
 
   /**
@@ -179,14 +134,7 @@ export default class PlexEngine {
     if (!path) return "";
     const url = new URL(path, `${this.plexUrl}/`);
     url.searchParams.set("X-Plex-Token", this.apiKey);
-    const authenticatedUrl = url.toString();
-
-    if (!this._bypassProxy && context?.signProxyUrl) {
-      const proxyUrl = context.signProxyUrl(authenticatedUrl);
-      return proxyUrl;
-    }
-
-    return authenticatedUrl;
+    return context.signProxyUrl(url.toString());
   }
 
   /**
@@ -227,7 +175,7 @@ export default class PlexEngine {
 
     const result = {
       title: String(item.title || ""),
-      url: this.buildItemUrl(item.ratingKey, type),
+      url: this.buildItemUrl(item.key),
       snippet,
       source: this.name,
     };
@@ -328,7 +276,7 @@ export default class PlexEngine {
     const term = query.trim();
     if (!term) return [];
 
-    const doFetch = this._bypassProxy ? fetch : (context?.fetch ?? fetch);
+    const doFetch = context?.fetch ?? fetch;
     const headers = {
       "X-Plex-Token": this.apiKey,
       Accept: "application/json",
