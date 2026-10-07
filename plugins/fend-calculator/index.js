@@ -713,7 +713,7 @@ var slot = {
     return {
       html: _htmlTemplate({
         expression: intent.expression,
-        result: out.ok ? `= ${out.result}` : ""
+        result: out.ok ? out.result : ""
       })
     };
   }
@@ -724,6 +724,7 @@ var command = {
   description: "Arbitrary-precision natural-language unit-aware calculator powered by fend.",
   trigger: "fend",
   aliases: ["calc", "calculate", "math"],
+  position: "at-a-glance",
   settingsSchema: [],
   init: _init,
   configure: _configure,
@@ -758,7 +759,7 @@ var command = {
       title: `Fend: ${args}`,
       html: _htmlTemplate({
         expression: intent.expression,
-        result: `= ${out.result}`
+        result: out.result
       })
     };
   }

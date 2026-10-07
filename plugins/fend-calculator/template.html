@@ -2,18 +2,22 @@
   <div class="fend-calc-screen">
     <input id="fend-calc-expression" name="expression" class="fend-calc-expr" type="text" value="{{expression}}"
       spellcheck="false" autocomplete="off" />
-    <div class="fend-calc-result">{{result}}</div>
+    <div class="fend-calc-result"><span class="fend-calc-equals">= </span>{{result}}</div>
   </div>
-  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 500 500" class="fend-calc-logo">
-    <defs>
-      <linearGradient id="a" x1="0%" x2="0%" y1="0%" y2="100%">
-        <stop offset="0%" stop-color="#ffbc6b" />
-        <stop offset="100%" stop-color="#ff8100" />
-      </linearGradient>
-    </defs>
-    <rect width="100%" height="100%" fill="var(--fend-logo, url(#a))" />
-    <path fill-rule="evenodd" stroke="currentColor" stroke-linecap="round" stroke-width=".25mm"
-      d="M249.766 416.289h-36.328V246.563H165v-30.274h48.438v-10.156q0-43.164 9.765-63.867a81.23 81.23 0 0 1 28.286-32.723 97 97 0 0 1 1.89-1.262 75.7 75.7 0 0 1 22.031-9.533Q289.536 95 307.383 95a260.6 260.6 0 0 1 51.562 5.274v34.57a216 216 0 0 0-21.141-5.894q-10.809-2.393-20.487-3.141a111 111 0 0 0-8.567-.34 79.6 79.6 0 0 0-16.118 1.561 61.8 61.8 0 0 0-14.546 4.884 44.3 44.3 0 0 0-18.046 16.234 57 57 0 0 0-2.755 4.762 49 49 0 0 0-3.635 9.784q-3.884 14.545-3.884 39.533v14.062h86.523v30.274h-86.523z"
-      font-size="12" vector-effect="non-scaling-stroke" />
-  </svg>
+  <div class="result-url-row">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 500 500"
+      class="fend-calc-logo result-favicon">
+      <defs>
+        <linearGradient id="a" x1="0%" x2="0%" y1="0%" y2="100%">
+          <stop offset="0%" stop-color="#ffbc6b" />
+          <stop offset="100%" stop-color="#ff8100" />
+        </linearGradient>
+      </defs>
+      <rect width="100%" height="100%" fill="var(--fend-logo, url(#a))" />
+      <path fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-width=".25mm"
+        d="M249.766 416.289h-36.328V246.563H165v-30.274h48.438v-10.156q0-43.164 9.765-63.867a81.23 81.23 0 0 1 28.286-32.723 97 97 0 0 1 1.89-1.262 75.7 75.7 0 0 1 22.031-9.533Q289.536 95 307.383 95a260.6 260.6 0 0 1 51.562 5.274v34.57a216 216 0 0 0-21.141-5.894q-10.809-2.393-20.487-3.141a111 111 0 0 0-8.567-.34 79.6 79.6 0 0 0-16.118 1.561 61.8 61.8 0 0 0-14.546 4.884 44.3 44.3 0 0 0-18.046 16.234 57 57 0 0 0-2.755 4.762 49 49 0 0 0-3.635 9.784q-3.884 14.545-3.884 39.533v14.062h86.523v30.274h-86.523z"
+        font-size="12" vector-effect="non-scaling-stroke" />
+    </svg>
+    <cite class="result-cite">Fend Calculator</cite>
+  </div>
 </div>
