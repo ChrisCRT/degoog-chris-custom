@@ -552,6 +552,33 @@ var fetchCurrencyRates = async (doFetch) => {
   return currencyRatePromise;
 };
 
+// src/date.js
+var _pad2 = (n) => String(n).padStart(2, "0");
+var _formatFendDate = (date) => {
+  return `@${date.getFullYear()}-${_pad2(date.getMonth() + 1)}-${_pad2(date.getDate())}`;
+};
+var _formatFendDateTime = (date) => {
+  return `${_formatFendDate(date)} ${_pad2(date.getHours())}:${_pad2(date.getMinutes())}`;
+};
+var _addDays = (date, days) => {
+  const out = new Date(date);
+  out.setDate(out.getDate() + days);
+  return out;
+};
+var dateCommands = (expression, now = new Date) => {
+  const aliases = [
+    [/\b(?:@)?tomorrow\b/gi, () => _formatFendDate(_addDays(now, 1))],
+    [/\b(?:@)?yesterday\b/gi, () => _formatFendDate(_addDays(now, -1))],
+    [/\b(?:@)?today\b/gi, () => _formatFendDate(now)],
+    [/\b(?:@)?now\b/gi, () => _formatFendDateTime(now)]
+  ];
+  let result = expression;
+  for (const [pattern, replacement] of aliases) {
+    result = result.replace(pattern, replacement);
+  }
+  return result;
+};
+
 // src/index.js
 var fendEnabled = true;
 var doFetch = null;
@@ -572,29 +599,26 @@ var _loadFend = async () => {
   return fendInitPromise;
 };
 var _parseLanguage = (query) => {
-  let expr = String(query || "").toLowerCase().replace(/^(please\s+)?(calculate|compute|convert|evaluate|work out)\s+/i, "").replace(/^(what(?:'s| is)\s+)/i, "").replace(/\?+$/, "").trim();
+  let expr = String(query || "").replace(/^(please\s+)?(calculate|compute|convert|evaluate|work out)\s+/i, "").replace(/^(what(?:'s| is)\s+)/i, "").replace(/\?+$/, "").trim();
   expr = expr.replace(/^(.+?)\s+plus\s+(.+)$/i, "$1 + $2").replace(/^(.+?)\s+minus\s+(.+)$/i, "$1 - $2").replace(/^(.+?)\s+(?:times|multiplied\s+by)\s+(.+)$/i, "$1 * $2").replace(/^(.+?)\s+(?:divided\s+by|over)\s+(.+)$/i, "$1 / $2").replace(/^square\s+root\s+of\s+(.+)$/i, "sqrt($1)").replace(/^cube\s+root\s+of\s+(.+)$/i, "cbrt($1)").replace(/^(.+?)\s+squared$/i, "($1)^2").replace(/^(.+?)\s+cubed$/i, "($1)^3").replace(/^(.+?)\s+to\s+the\s+power\s+of\s+(.+)$/i, "$1^($2)").replace(/^sine\s+of\s+(.+)$/i, "sin($1)").replace(/^cosine\s+of\s+(.+)$/i, "cos($1)").replace(/^tangent\s+of\s+(.+)$/i, "tan($1)").replace(/^natural\s+log(?:arithm)?\s+of\s+(.+)$/i, "ln($1)").replace(/^log(?:arithm)?\s+of\s+(.+)$/i, "log($1)").replace(/^log(?:arithm)?\s+base\s+2\s+of\s+(.+)$/i, "log2($1)").replace(/^absolute\s+value\s+of\s+(.+)$/i, "abs($1)").replace(/^(.+?)\s+factorial$/i, "$1!").replace(/^(.+?)\s+percent\s+of\s+(.+)$/i, "$1% of $2").replace(/\bdecimal\s+places?\b/gi, "dp");
+  expr = dateCommands(expr);
   expr = expr.endsWith("=") ? expr.slice(0, -1).trim() : expr;
-  return { type: "calc", expression: expr, raw: query };
+  return { expression: expr, raw: query };
 };
-var _isNoCacheExpression = (type) => {
-  switch (type) {
-    case "roll":
-    case "sample":
-    case "now":
-    case "today":
-    case "tomorrow":
-      return true;
-    default:
-      return false;
-  }
+var _isNoCacheExpression = (expr) => {
+  let type = "calc";
+  if (/^\s*roll\b/i.test(expr))
+    type = "roll";
+  if (/^\s*sample\b/i.test(expr))
+    type = "sample";
+  return type === "calc";
 };
 var _evaluate = async (query, timeout = EVAL_TIMEOUT) => {
   if (query.length > MAX_EXPR_LEN)
     return { ok: false, result: "" };
   const intent = _parseLanguage(query);
   const expr = intent.expression;
-  const isNoCache = _isNoCacheExpression(intent.type);
+  const isNoCache = _isNoCacheExpression(expr);
   if (!expr)
     return { ok: false, result: "" };
   try {

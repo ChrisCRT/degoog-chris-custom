@@ -24,7 +24,6 @@ const _loadFend = async () => {
 
 const _parseLanguage = (query) => {
   let expr = String(query || "")
-    .toLowerCase()
     .replace(
       /^(please\s+)?(calculate|compute|convert|evaluate|work out)\s+/i,
       "",
