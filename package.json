@@ -2,7 +2,7 @@
   "name": "degoog-chris-custom",
   "description": "custom stuffs",
   "author": "ChrisCRT",
-  "repo-image": "",
+  "repo-image": "repo-image.jpg",
   "themes": [
     {
       "path": "themes/spaceman",
