@@ -98,7 +98,7 @@ async function fetchMachineId(headers, doFetch, context) {
  * @returns {string}
  */
 function buildItemUrl(item) {
-  const key = item.key || `/library/metadata/${item.ratingKey}`;
+  const key = `/library/metadata/${item.ratingKey}`;
   const encodedKey = encodeURIComponent(key);
   if (!machineId) return plexUrl;
 
@@ -188,21 +188,10 @@ function renderItem(item, context) {
   const thumbPath = item.thumb || item.art || "";
   const thumbSrc = thumbPath ? buildThumbnailUrl(thumbPath, context) : "";
   const thumbnailBlock = thumbSrc
-    ? isVideo
-      ? `<div class="result-thumbnail-wrap plex--thumb-video" role="button" tabindex="0"
-         aria-label="Play video" data-url="${escHtml(buildItemUrl(item))}">
+    ? `<a class="result-thumbnail-wrap ${isVideo ? "plex--thumb-video" : "plex--thumb"}" href="${escHtml(buildItemUrl(item))}">
          <img class="result-thumbnail-img" src="${escHtml(thumbSrc)}" alt="" loading="lazy"
            onerror="this.parentElement.style.display='none'">
-         ${duration ? `<span class="plex--thumb-video-duration">${escHtml(duration)}</span>` : ""}
-         <div class="plex--video-play" aria-hidden="true">
-           <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-             <polygon points="5 3 19 12 5 21 5 3"/>
-           </svg>
-         </div>
-       </div>`
-      : `<a class="result-thumbnail-wrap plex--thumb" href="${escHtml(buildItemUrl(item))}">
-         <img class="result-thumbnail-img" src="${escHtml(thumbSrc)}" alt="" loading="lazy"
-           onerror="this.parentElement.style.display='none'">
+         ${duration ? `<span class="plex--video-duration">${escHtml(duration)}</span>` : ""}
        </a>`
     : "";
   const subtitleBlock = buildEpisodeContext(item)
