@@ -30,7 +30,7 @@
       "path": "plugins/plex-search",
       "name": "Plex",
       "description": "",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "type": "command"
     }
   ],
