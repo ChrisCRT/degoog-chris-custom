@@ -155,7 +155,6 @@ function formatDuration(duration) {
 function buildEpisodeContext(item) {
   const type = String(item.type || "");
   const parts = [];
-
   if (type === "episode") {
     const series = item.grandparentTitle || "";
     if (series) parts.push(series);
@@ -184,32 +183,48 @@ function renderItem(item, context) {
   const title = String(item.title || "");
   const year = item.year ? ` (${item.year})` : "";
   const summary = String(item.summary || "");
-  const episodeContext = buildEpisodeContext(item);
   const isVideo = type === "movie" || type === "episode";
   const duration = isVideo ? formatDuration(item.duration) : "";
-  const subtitle = episodeContext
-    ? `<div class="result-episode-context">${escHtml(episodeContext)}</div>`
+  const thumbPath = item.thumb || item.art || "";
+  const thumbSrc = thumbPath ? buildThumbnailUrl(thumbPath, context) : "";
+  const thumbnailBlock = thumbSrc
+    ? isVideo
+      ? `<div class="result-thumbnail-wrap plex--thumb-video" role="button" tabindex="0"
+         aria-label="Play video" data-url="${escHtml(buildItemUrl(item))}">
+         <img class="result-thumbnail-img" src="${escHtml(thumbSrc)}" alt="" loading="lazy"
+           onerror="this.parentElement.style.display='none'">
+         ${duration ? `<span class="plex--thumb-video-duration">${escHtml(duration)}</span>` : ""}
+         <div class="plex--video-play" aria-hidden="true">
+           <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+             <polygon points="5 3 19 12 5 21 5 3"/>
+           </svg>
+         </div>
+       </div>`
+      : `<a class="result-thumbnail-wrap plex--thumb" href="${escHtml(buildItemUrl(item))}">
+         <img class="result-thumbnail-img" src="${escHtml(thumbSrc)}" alt="" loading="lazy"
+           onerror="this.parentElement.style.display='none'">
+       </a>`
     : "";
-  const badges = [
+  const subtitleBlock = buildEpisodeContext(item)
+    ? `<div class="result-episode-context">${escHtml(buildEpisodeContext(item))}</div>`
+    : "";
+  const badgesBlock = [
     `<span class="result-engine-tag">${escHtml(type)}</span>`,
     `<span class="result-engine-tag">Plex</span>`,
     ...(duration
       ? [`<span class="result-engine-tag">${escHtml(duration)}</span>`]
       : []),
   ].join("");
-  const thumbPath = item.thumb || item.art || "";
-  const thumbSrc = thumbPath ? buildThumbnailUrl(thumbPath, context) : "";
 
   const data = {
     favicon_url: PLEX_LOGO,
     cite_url: escHtml(plexUrl),
     url: escHtml(buildItemUrl(item)),
     title: escHtml(title) + escHtml(year),
-    subtitle,
     overview: escHtml(summary),
-    badges,
-    thumbnail_url: escHtml(thumbSrc),
-    is_video: isVideo,
+    badgesBlock,
+    subtitleBlock,
+    thumbnailBlock,
   };
 
   data.duration = escHtml(duration);
@@ -260,10 +275,9 @@ async function findEpisode(episodeQuery, headers, doFetch, context) {
         `${plexUrl}/search?query=${encodeURIComponent(variant)}&type=2&limit=25`,
         { headers },
       );
-
       context?.sentinel?.(response, "Plex");
-
       if (!response.ok) return null;
+
       return response.json();
     }),
   );
@@ -328,10 +342,9 @@ async function searchLibrary(term, headers, doFetch, context) {
         `${plexUrl}/hubs/search?query=${encodeURIComponent(variant)}&limit=25`,
         { headers },
       );
-
       context?.sentinel?.(response, "Plex");
-
       if (!response.ok) return null;
+
       return response.json();
     }),
   );

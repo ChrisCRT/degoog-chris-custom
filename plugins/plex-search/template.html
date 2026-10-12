@@ -1,36 +1,13 @@
 <div class="result-item">
   <div class="result-item-inner">
-    {{#if thumbnail_url}}
-    {{#if is_video}}
-    <div class="result-thumbnail-wrap plex--thumb-video" role="button" tabindex="0" aria-label="Play video"
-      data-url="{{ url }}">
-      <img class="result-thumbnail-img" src="{{ thumbnail_url }}" alt="" loading="lazy"
-        onerror="this.parentElement.style.display = 'none'" />
-      {{#if duration}}<span class="plex--thumb-video-duration">{{ duration }}</span>{{/if duration}}
-      <div class="plex--video-play" aria-hidden="true">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-          <polygon points="5 3 19 12 5 21 5 3" />
-        </svg>
-      </div>
-    </div>
-    {{/if is_video}}
-    {{^if is_video}}
-    <a class="result-thumbnail-wrap plex--thumb" href="{{ url }}">
-      <img class="result-thumbnail-img" src="{{ thumbnail_url }}" alt="" loading="lazy"
-        onerror="this.parentElement.style.display = 'none'" />
-    </a>
-    {{/if is_video}}
-    {{/if thumbnail_url}}
-
+    {{thumbnailBlock}}
     <div class="result-body">
       <div class="result-url-row">
         <img class="result-favicon" src="{{ favicon_url }}" alt="" width="26" height="26" loading="lazy" />
         <cite class="result-cite">{{ cite_url }}</cite>
       </div>
       <a class="result-title" href="{{ url }}">{{ title }}</a>
-      {{#if subtitle}}
-      <div class="result-episode-context">{{subtitle}}</div>
-      {{/if subtitle}}
+      {{subtitleBlock}}
       <p class="result-snippet">{{overview}}</p>
       <div class="result-engines">{{badges}}</div>
     </div>
