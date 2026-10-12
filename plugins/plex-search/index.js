@@ -124,7 +124,9 @@ function buildThumbnailUrl(path, context) {
   if (!path) return "";
   const url = new URL(path, `${plexUrl}/`);
   url.searchParams.set("X-Plex-Token", apiKey);
-  return context.signProxyUrl(url.toString());
+  //return context.signProxyUrl(url.toString());
+  // use direct url for thumbnails
+  return url.toString();
 }
 
 /**
@@ -183,7 +185,8 @@ function renderItem(item, context) {
   const year = item.year ? ` (${item.year})` : "";
   const summary = String(item.summary || "");
   const episodeContext = buildEpisodeContext(item);
-  const duration = formatDuration(item.duration);
+  const isVideo = type === "movie" || type === "episode";
+  const duration = isVideo ? formatDuration(item.duration) : "";
   const subtitle = episodeContext
     ? `<div class="result-episode-context">${escHtml(episodeContext)}</div>`
     : "";
@@ -196,19 +199,17 @@ function renderItem(item, context) {
   ].join("");
   const thumbPath = item.thumb || item.art || "";
   const thumbSrc = thumbPath ? buildThumbnailUrl(thumbPath, context) : "";
-  const thumbBlock = thumbSrc
-    ? `<div class="result-thumbnail-wrap"><img class="result-thumbnail-img" src="${escHtml(thumbSrc)}" alt="" loading="lazy"></div>`
-    : "";
 
   const data = {
-    faviconSrc: PLEX_LOGO,
-    cite: escHtml(plexUrl),
-    itemUrl: escHtml(buildItemUrl(item)),
+    favicon_url: PLEX_LOGO,
+    cite_url: escHtml(plexUrl),
+    url: escHtml(buildItemUrl(item)),
     title: escHtml(title) + escHtml(year),
     subtitle,
     overview: escHtml(summary),
     badges,
-    thumbBlock,
+    thumbnail_url: escHtml(thumbSrc),
+    is_video: isVideo,
   };
 
   data.duration = escHtml(duration);

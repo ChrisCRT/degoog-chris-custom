@@ -3,3 +3,37 @@
   color: var(--text-secondary);
   margin-top: 2px;
 }
+
+.plex--thumb {
+  min-block-size: 5.625rem;
+  max-block-size: 10rem;
+  block-size: auto;
+}
+
+.plex--thumb--video {
+  position: relative;
+  cursor: pointer;
+}
+
+.plex--video-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.plex--video-duration {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font-size: 0.6875rem;
+  padding: 2px 0.25rem;
+  border-radius: 0.1875rem;
+  pointer-events: none;
+}
