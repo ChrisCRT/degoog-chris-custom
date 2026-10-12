@@ -18,10 +18,7 @@ const EPISODE_PATTERNS = [
   /^(.+?)\s+(\d+)x(\d+)$/i,
 ];
 
-const SEASON_PATTERNS = [
-  /^(.+?)\s+season\s+(\d+)$/i,
-   /^(.+?)\s+s(\d+)$/i,
-  ];
+const SEASON_PATTERNS = [/^(.+?)\s+season\s+(\d+)$/i, /^(.+?)\s+s(\d+)$/i];
 
 /**
  * @param {string} term
@@ -120,11 +117,9 @@ export default class PlexEngine {
    */
   buildItemUrl(key) {
     const encodedKey = encodeURIComponent(`${key}`);
-
     if (this.urlMode === "plexWeb") {
       return `https://app.plex.tv/desktop/#!/server/${this.machineId}/details?key=${encodedKey}`;
     }
-
     return `${this.plexUrl}/web/index.html#!/server/${this.machineId}/details?key=${encodedKey}`;
   }
 

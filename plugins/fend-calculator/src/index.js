@@ -9,7 +9,8 @@ let evalCache = null;
 let template = "";
 
 const MAX_EXPR_LEN = 300;
-const EVAL_TIMEOUT = 500;
+const EVAL_TIMEOUT_DEFAULT = 200;
+let EVAL_TIMEOUT = EVAL_TIMEOUT_DEFAULT;
 
 const _loadFend = async () => {
   if (!fendInitPromise) {
@@ -141,6 +142,9 @@ const _init = (ctx) => {
 
 const _configure = (settings) => {
   fendEnabled = settings?.enabled !== "false";
+  const timeout = Number(settings?.evalTimeout);
+  EVAL_TIMEOUT =
+    Number.isFinite(timeout) && timeout > 0 ? timeout : EVAL_TIMEOUT_DEFAULT;
 };
 
 export const plugin = {
@@ -154,6 +158,14 @@ export const plugin = {
       key: "enabled",
       label: "Enabled",
       type: "toggle",
+      default: "true"
+    },
+    {
+      key: "evalTimeout",
+      label: "Evaluation timeout (milliseconds)",
+      type: "number",
+      default: EVAL_TIMEOUT_DEFAULT,
+      min: 1,
     },
   ],
 };
@@ -174,7 +186,7 @@ export const slot = {
     if (!fendEnabled || query.length > MAX_EXPR_LEN) return false;
     const intent = _parseLanguage(query);
     if (!intent?.expression) return false;
-    const out = await _evaluate(intent.expression, 250);
+    const out = await _evaluate(intent.expression);
     return out.ok;
   },
 
@@ -197,7 +209,6 @@ export const command = {
     "Arbitrary-precision natural-language unit-aware calculator powered by fend.",
   trigger: "fend",
   aliases: ["calc", "calculate", "math"],
-  position: "at-a-glance",
 
   settingsSchema: [],
 

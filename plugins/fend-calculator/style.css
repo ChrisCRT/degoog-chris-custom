@@ -39,10 +39,11 @@
 .fend-calc-result {
   font-size: 1.6rem;
   font-weight: 700;
-  min-height: 1.6rem;
   padding: 0;
   word-wrap: break-word;
-  overflow-x: auto;
+  overflow-y: auto;
+  min-block-size: 1.6rem;
+  max-block-size: 10lh;
 }
 
 .fend-calc-equals {
