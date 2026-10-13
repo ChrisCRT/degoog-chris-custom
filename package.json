@@ -16,22 +16,22 @@
       "path": "plugins/fend-calculator",
       "name": "Fend Calculator",
       "description": "Arbitrary-precision unit-aware calculator",
-      "version": "0.0.9",
-      "type": "slot"
+      "version": "0.0.10",
+      "type": "command, slot"
     },
     {
       "path": "plugins/github-slot",
       "name": "Github",
       "description": "",
       "version": "1.0.0",
-      "type": "command"
+      "type": "slot"
     },
     {
       "path": "plugins/plex-search",
       "name": "Plex",
       "description": "",
-      "version": "0.0.5",
-      "type": "command"
+      "version": "0.0.7",
+      "type": "command, slot"
     }
   ],
   "engines": []
