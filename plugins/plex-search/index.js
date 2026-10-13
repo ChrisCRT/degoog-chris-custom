@@ -1,56 +1,51 @@
-const PLEX_PLUGIN_ID = "plugin-plex";
+let template = "";
+let doFetch = null;
 
 let plexUrl = "";
 let apiKey = "";
 let urlMode = "server";
+let bypassImageProxy = false;
 let machineId = "";
-let template = "";
 const PER_PAGE = 25;
 
 const PLEX_LOGO =
   "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@refs/heads/main/svg/plex.svg";
 
-/**
- * @param {string} s
- * @returns {string}
- */
-function escHtml(s) {
-  return String(s)
+const _esc = (s) => {
+  if (typeof s !== "string") return "";
+  return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
+};
 
-/**
- * @param {string} term
- * @returns {string[]}
- */
-function searchVariants(term) {
+const _render = (data) => {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => data[key] ?? "");
+};
+
+const _searchVariants = (term) => {
   const variants = [term];
   if (term.includes("-")) variants.push(term.replace(/-/g, " "));
   else if (/\w\s+\w/.test(term)) variants.push(term.replace(/\s+/g, "-"));
   if (term.includes(".")) variants.push(term.replace(/\./g, " "));
   if (term.includes("'")) variants.push(term.replace(/'/g, ""));
   return [...new Set(variants)];
-}
+};
 
-const EPISODE_PATTERNS = [
-  /^(.+?)\s+s(\d+)\s*e(\d+)$/i,
-  /^(.+?)\s+season\s+(\d+)\s+episode\s+(\d+)$/i,
-  /^(.+?)\s+season\s+(\d+)\s+ep\.?\s+(\d+)$/i,
-  /^(.+?)\s+(\d+)x(\d+)$/i,
-];
+const PATTERNS = {
+  SEASON: [/^(.+?)\s+season\s+(\d+)$/i, /^(.+?)\s+s(\d+)$/i],
+  EPISODE: [
+    /^(.+?)\s+s(\d+)\s*e(\d+)$/i,
+    /^(.+?)\s+season\s+(\d+)\s+episode\s+(\d+)$/i,
+    /^(.+?)\s+season\s+(\d+)\s+ep\.?\s+(\d+)$/i,
+    /^(.+?)\s+(\d+)x(\d+)$/i,
+  ],
+};
 
-const SEASON_PATTERNS = [/^(.+?)\s+season\s+(\d+)$/i, /^(.+?)\s+s(\d+)$/i];
-
-/**
- * @param {string} term
- * @returns {{ series: string, season: number, episode: number|null }|null}
- */
-function parseEpisodeQuery(term) {
-  for (const re of EPISODE_PATTERNS) {
+const _parseEpisodeQuery = (term) => {
+  for (const re of PATTERNS.EPISODE) {
     const m = term.match(re);
     if (m) {
       return {
@@ -60,7 +55,7 @@ function parseEpisodeQuery(term) {
       };
     }
   }
-  for (const re of SEASON_PATTERNS) {
+  for (const re of PATTERNS.SEASON) {
     const m = term.match(re);
     if (m) {
       return {
@@ -72,14 +67,9 @@ function parseEpisodeQuery(term) {
   }
 
   return null;
-}
+};
 
-/**
- * @param {Record<string, string>} headers
- * @param {Function} doFetch
- * @param {object} context
- */
-async function fetchMachineId(headers, doFetch, context) {
+const _fetchMachineId = async (headers, doFetch, context) => {
   const response = await doFetch(`${plexUrl}/identity`, { headers });
   context?.sentinel?.(response, "Plex");
   if (!response.ok) {
@@ -91,13 +81,9 @@ async function fetchMachineId(headers, doFetch, context) {
     throw new Error("Plex identity response did not contain machineIdentifier");
   }
   machineId = id;
-}
+};
 
-/**
- * @param {object} item
- * @returns {string}
- */
-function buildItemUrl(item) {
+const _buildItemUrl = (item) => {
   const key = `/library/metadata/${item.ratingKey}`;
   const encodedKey = encodeURIComponent(key);
   if (!machineId) return plexUrl;
@@ -113,27 +99,18 @@ function buildItemUrl(item) {
     default:
       return `${plexUrl}/web/index.html#!/server/${machineId}/details?key=${encodedKey}`;
   }
-}
+};
 
-/**
- * @param {string} path
- * @param {object} context
- * @returns {string}
- */
-function buildThumbnailUrl(path, context) {
+const _buildThumbnailUrl = (path, context) => {
   if (!path) return "";
   const url = new URL(path, `${plexUrl}/`);
   url.searchParams.set("X-Plex-Token", apiKey);
-  //return context.signProxyUrl(url.toString());
-  // use direct url for thumbnails
-  return url.toString();
-}
 
-/**
- * @param {unknown} duration
- * @returns {string}
- */
-function formatDuration(duration) {
+  if (bypassImageProxy) return url.toString();
+  return context.signProxyUrl(url.toString());
+};
+
+const _formatDuration = (duration) => {
   const milliseconds = Number(duration);
   if (!Number.isFinite(milliseconds) || milliseconds <= 0) return "";
   const totalSeconds = Math.floor(milliseconds / 1000);
@@ -146,13 +123,9 @@ function formatDuration(duration) {
     String(minutes).padStart(2, "0"),
     String(seconds).padStart(2, "0"),
   ].join(":");
-}
+};
 
-/**
- * @param {object} item
- * @returns {string}
- */
-function buildEpisodeContext(item) {
+const _buildEpisodeContext = (item) => {
   const type = String(item.type || "");
   const parts = [];
   if (type === "episode") {
@@ -171,67 +144,52 @@ function buildEpisodeContext(item) {
   }
 
   return parts.join(" - ");
-}
+};
 
-/**
- * @param {object} item
- * @param {object} context
- * @returns {string}
- */
-function renderItem(item, context) {
+const _renderItem = (item, context) => {
   const type = String(item.type || "");
   const title = String(item.title || "");
   const year = item.year ? ` (${item.year})` : "";
   const summary = String(item.summary || "");
   const isVideo = type === "movie" || type === "episode";
-  const duration = isVideo ? formatDuration(item.duration) : "";
+  const duration = isVideo ? _formatDuration(item.duration) : "";
   const thumbPath = item.thumb || item.art || "";
-  const thumbSrc = thumbPath ? buildThumbnailUrl(thumbPath, context) : "";
+  const thumbSrc = thumbPath ? _buildThumbnailUrl(thumbPath, context) : "";
   const thumbnailBlock = thumbSrc
-    ? `<a class="result-thumbnail-wrap ${isVideo ? "plex--thumb-video" : "plex--thumb"}" href="${escHtml(buildItemUrl(item))}">
-         <img class="result-thumbnail-img" src="${escHtml(thumbSrc)}" alt="" loading="lazy"
+    ? `<a class="result-thumbnail-wrap ${isVideo ? "plex--thumb-video" : "plex--thumb"}" href="${_esc(_buildItemUrl(item))}">
+         <img class="result-thumbnail-img" src="${_esc(thumbSrc)}" alt="" loading="lazy"
            onerror="this.parentElement.style.display='none'">
-         ${duration ? `<span class="plex--video-duration">${escHtml(duration)}</span>` : ""}
+         ${duration ? `<span class="plex--video-duration">${_esc(duration)}</span>` : ""}
        </a>`
     : "";
-  const subtitleBlock = buildEpisodeContext(item)
-    ? `<div class="result-episode-context">${escHtml(buildEpisodeContext(item))}</div>`
+  const episodeContext = _buildEpisodeContext(item);
+  const subtitleBlock = episodeContext
+    ? `<div class="result-episode-context">${_esc(episodeContext)}</div>`
     : "";
-  const badgesBlock = [
-    `<span class="result-engine-tag">${escHtml(type)}</span>`,
-    `<span class="result-engine-tag">Plex</span>`,
-    ...(duration
-      ? [`<span class="result-engine-tag">${escHtml(duration)}</span>`]
-      : []),
-  ].join("");
+  const badgesBlock = [type, "Plex"]
+    .map((badge) => `<span class="result-engine-tag">${_esc(badge)}</span>`)
+    .join();
 
   const data = {
     favicon_url: PLEX_LOGO,
-    cite_url: escHtml(plexUrl),
-    url: escHtml(buildItemUrl(item)),
-    title: escHtml(title) + escHtml(year),
-    overview: escHtml(summary),
+    cite_url: _esc(plexUrl),
+    url: _esc(_buildItemUrl(item)),
+    title: _esc(title) + _esc(year),
+    overview: _esc(summary),
     badgesBlock,
     subtitleBlock,
     thumbnailBlock,
   };
 
-  data.duration = escHtml(duration);
-  data.type = escHtml(type);
-  data.year = escHtml(item.year || "");
+  data.duration = _esc(duration);
+  data.type = _esc(type);
+  data.year = _esc(item.year || "");
   data.source = "Plex";
 
-  return String(template || "").replace(
-    /\{\{(\w+)\}\}/g,
-    (_, key) => data[key] ?? "",
-  );
-}
+  return _render(data);
+};
 
-/**
- * @param {object[][]} groups
- * @returns {object[]}
- */
-function deduplicateItems(groups) {
+const _deduplicateItems = (groups) => {
   const seen = new Set();
   const results = [];
   for (const group of groups) {
@@ -247,17 +205,10 @@ function deduplicateItems(groups) {
   }
 
   return results;
-}
+};
 
-/**
- * @param {{ series: string, season: number, episode: number|null }} episodeQuery
- * @param {Record<string, string>} headers
- * @param {Function} doFetch
- * @param {object} context
- * @returns {Promise<object[]>}
- */
-async function findEpisode(episodeQuery, headers, doFetch, context) {
-  const seriesVariants = searchVariants(episodeQuery.series);
+const _findEpisode = async (episodeQuery, headers, doFetch, context) => {
+  const seriesVariants = _searchVariants(episodeQuery.series);
   const seriesResults = await Promise.all(
     seriesVariants.map(async (variant) => {
       const response = await doFetch(
@@ -271,7 +222,7 @@ async function findEpisode(episodeQuery, headers, doFetch, context) {
     }),
   );
 
-  const shows = deduplicateItems(
+  const shows = _deduplicateItems(
     seriesResults.map((data) => data?.MediaContainer?.Metadata || []),
   );
   if (!shows.length) return [];
@@ -312,18 +263,11 @@ async function findEpisode(episodeQuery, headers, doFetch, context) {
     }
   }
 
-  return deduplicateItems([matchingItems]);
-}
+  return _deduplicateItems([matchingItems]);
+};
 
-/**
- * @param {string} term
- * @param {Record<string, string>} headers
- * @param {Function} doFetch
- * @param {object} context
- * @returns {Promise<object[]>}
- */
-async function searchLibrary(term, headers, doFetch, context) {
-  const variants = searchVariants(term);
+const _searchLibrary = async (term, headers, doFetch, context) => {
+  const variants = _searchVariants(term);
 
   const responses = await Promise.all(
     variants.map(async (variant) => {
@@ -346,19 +290,18 @@ async function searchLibrary(term, headers, doFetch, context) {
     }
   }
 
-  return deduplicateItems(groups);
-}
+  return _deduplicateItems(groups);
+};
 
-function renderMessage(message) {
+const _renderMessage = (message) => {
   return `<div class="command-result"><p>${message}</p></div>`;
-}
+};
 
-export default {
+export const plugin = {
+  id: "plugin-plex",
   name: "Plex",
   description: "Search your Plex media library",
-  trigger: "plex",
-  isClientExposed: false,
-  aliases: ["px"],
+
   settingsSchema: [
     {
       key: "url",
@@ -387,45 +330,144 @@ export default {
       description:
         "Choose where results open: your server (URL above), Plex Web (plex.tv), or Plex Desktop (app)",
     },
+    {
+      key: "bypassImageProxy",
+      label: "Bypass image proxy",
+      type: "toggle",
+      default: "false",
+      description:
+        "When enabled, images are loaded directly from plex instead of degoog's image proxy. This is helpful when using a proxy service that cant see plex, like a VPN.",
+    },
   ],
+};
 
-  /** @param {{ template?: string }} ctx */
-  init(ctx) {
-    template = ctx?.template || "";
+const _init = (ctx) => {
+  template = ctx?.template || "";
+  doFetch = ctx.fetch ?? fetch;
+};
+
+const _configure = (settings) => {
+  plexUrl = (settings.url || "").replace(/\/+$/, "");
+  apiKey = settings.apiKey || "";
+  urlMode = settings.urlMode || "server";
+  bypassImageProxy = settings.bypassImageProxy !== "false";
+  slot.isClientExposed = bypassImageProxy;
+  command.isClientExposed = bypassImageProxy;
+  machineId = "";
+};
+
+const _isConfigured = () => {
+  if (!plexUrl || !apiKey) return false;
+  return true;
+};
+
+const _execute = async (query, context = {}) => {
+  const headers = {
+    "X-Plex-Token": apiKey,
+    Accept: "application/json",
+  };
+  if (!machineId) {
+    await _fetchMachineId(headers, doFetch, context);
+  }
+
+  const episodeQuery = _parseEpisodeQuery(query);
+  let items = [];
+  if (episodeQuery) {
+    items = await _findEpisode(episodeQuery, headers, doFetch, context);
+  }
+  if (!items.length) {
+    items = await _searchLibrary(query, headers, doFetch, context);
+  }
+
+  return items;
+};
+
+export const slot = {
+  isClientExposed: bypassImageProxy,
+  name: "Plex",
+  description: "Search your Plex media library",
+  position: "knowledge-panel",
+
+  settingsSchema: [],
+
+  init: _init,
+  configure: _configure,
+
+  async trigger(query) {
+    if (!_isConfigured() || !query?.trim()) return false;
+    return true;
   },
 
-  /** @param {{ url?: string, apiKey?: string, urlMode?: string }} settings */
-  configure(settings) {
-    plexUrl = (settings.url || "").replace(/\/+$/, "");
-    apiKey = settings.apiKey || "";
-    urlMode = settings.urlMode || "server";
-    machineId = "";
-  },
+  async execute(query, context = {}) {
+    try {
+      if (!_isConfigured()) {
+        return { title: "Plex", html: "" };
+      }
 
-  async isConfigured() {
-    return Boolean(plexUrl && apiKey);
-  },
+      const term = String(query).trim();
+      if (!term) return { title: "Plex", html: "" };
 
-  /**
-   * @param {string} args
-   * @param {object} context
-   */
+      const items = await _execute(term, context);
+      if (!items.length) return { title: "Plex", html: "" };
+
+      const slotMaxResults = 3;
+      const displayItems = items.slice(0, slotMaxResults);
+      const resultsHtml = displayItems
+        .map((item) => _renderItem(item, context))
+        .join("");
+
+      const itemCount =
+        items.length > slotMaxResults
+          ? `${slotMaxResults} of ${items.length} results`
+          : `${items.length} result${items.length !== 1 ? "s" : ""}`;
+
+      const result = {
+        title: `Plex: ${term}`,
+        html: `
+          <div class="plex-slot-container">
+            <div class="plex-slot-count">${itemCount}</div>
+            <div class="plex-slot-results">
+              ${resultsHtml}
+            </div>
+          </div>
+        `,
+      };
+
+      return result;
+    } catch (error) {
+      context?.logger?.warn?.("Plex slot execute failed", error);
+      return { title: "Plex", html: "" };
+    }
+  },
+};
+
+export const command = {
+  isClientExposed: bypassImageProxy,
+  name: "Plex",
+  description: "Search your Plex media library",
+  trigger: "plex",
+  aliases: ["px"],
+
+  settingsSchema: [],
+
+  init: _init,
+  configure: _configure,
+
   async execute(args, context = {}) {
-    if (!plexUrl || !apiKey) {
+    if (!_isConfigured()) {
       return {
         title: "Plex Search",
-        html: renderMessage(
+        html: _renderMessage(
           'Plex is not configured. Go to <a href="/settings">Settings → Plugins</a> to configure your Plex URL and token.',
         ),
       };
     }
 
     const term = String(args || "").trim();
-
     if (!term) {
       return {
         title: "Plex Search",
-        html: renderMessage("Usage: <code>!plex &lt;search term&gt;</code>"),
+        html: _renderMessage("Usage: <code>!plex &lt;search term&gt;</code>"),
       };
     }
 
@@ -433,31 +475,11 @@ export default {
       const page = Math.max(1, Math.floor(Number(context.page) || 1));
       const startIndex = (page - 1) * PER_PAGE;
 
-      const doFetch = context?.fetch ?? fetch;
-      const headers = {
-        "X-Plex-Token": apiKey,
-        Accept: "application/json",
-      };
-
-      if (!machineId) {
-        await fetchMachineId(headers, doFetch, context);
-      }
-
-      const episodeQuery = parseEpisodeQuery(term);
-      let items = [];
-      if (episodeQuery) {
-        items = await findEpisode(episodeQuery, headers, doFetch, context);
-      }
-
-      // Fall back to normal Plex search if no episode matches were found.
-      if (!items.length) {
-        items = await searchLibrary(term, headers, doFetch, context);
-      }
-
+      const items = await _execute(term, context);
       if (!items.length) {
         return {
           title: "Plex Search",
-          html: renderMessage(`No results found for "${escHtml(term)}"`),
+          html: _renderMessage(`No results found for "${_esc(term)}"`),
           totalPages: 1,
         };
       }
@@ -469,13 +491,13 @@ export default {
       if (!pageItems.length) {
         return {
           title: `Plex: ${term} - ${totalCount} results`,
-          html: renderMessage("No results on this page."),
+          html: _renderMessage("No results on this page."),
           totalPages,
         };
       }
 
       const results = pageItems
-        .map((item) => renderItem(item, context))
+        .map((item) => _renderItem(item, context))
         .join("");
 
       const pageInfo = totalPages > 1 ? ` - Page ${page} of ${totalPages}` : "";
@@ -490,7 +512,7 @@ export default {
 
       return {
         title: "Plex Search",
-        html: renderMessage(
+        html: _renderMessage(
           "Failed to connect to Plex. Check your server URL, token, and server availability.",
         ),
       };

@@ -2,11 +2,12 @@ import * as fendModule from "fend-wasm-web";
 import { initCurrency, fetchCurrencyRates } from "./currency";
 import { dateCommands } from "./date";
 
-let fendEnabled = true;
+let template = "";
 let doFetch = null;
+
+let fendEnabled = true;
 let fendInitPromise = null;
 let evalCache = null;
-let template = "";
 
 const MAX_EXPR_LEN = 300;
 const EVAL_TIMEOUT_DEFAULT = 200;
@@ -132,21 +133,6 @@ const _json = (body, status = 200) => {
   });
 };
 
-const _init = (ctx) => {
-  template = ctx.template;
-  evalCache = ctx.useCache("fend-eval", 30_000);
-  const currencyCache = ctx.useCache("fend-currency-rates", 259_200_000);
-  initCurrency(currencyCache);
-  doFetch = ctx.fetch ?? fetch;
-};
-
-const _configure = (settings) => {
-  fendEnabled = settings?.enabled !== "false";
-  const timeout = Number(settings?.evalTimeout);
-  EVAL_TIMEOUT =
-    Number.isFinite(timeout) && timeout > 0 ? timeout : EVAL_TIMEOUT_DEFAULT;
-};
-
 export const plugin = {
   id: "fend-calculator",
   name: "Fend Calculator",
@@ -158,7 +144,7 @@ export const plugin = {
       key: "enabled",
       label: "Enabled",
       type: "toggle",
-      default: "true"
+      default: "true",
     },
     {
       key: "evalTimeout",
@@ -168,6 +154,21 @@ export const plugin = {
       min: 1,
     },
   ],
+};
+
+const _init = (ctx) => {
+  template = ctx.template;
+  evalCache = ctx.useCache("fend-eval", 30_000);
+  const currencyCache = ctx.useCache("fend-currency-rates", 259_200_000);
+  initCurrency(currencyCache);
+  doFetch = ctx.fetch ?? fetch;
+};
+
+const _configure = (settings) => {
+  fendEnabled = settings.enabled !== "false";
+  const timeout = Number(settings.evalTimeout);
+  EVAL_TIMEOUT =
+    Number.isFinite(timeout) && timeout > 0 ? timeout : EVAL_TIMEOUT_DEFAULT;
 };
 
 export const slot = {
