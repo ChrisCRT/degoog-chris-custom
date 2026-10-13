@@ -12,7 +12,9 @@ let bypassProxy = false;
 let machineId = "";
 const PER_PAGE = 25;
 
-const PLEX_LOGO = "./plex.svg";
+let PLEX_LOGO_FILE = "";
+let PLEX_LOGO = "";
+let THUMB_ROUTE = "";
 
 const _esc = (s) => {
   if (typeof s !== "string") return "";
@@ -100,13 +102,9 @@ const _buildItemUrl = (item) => {
   }
 };
 
-const _buildThumbnailUrl = (path, context) => {
-  if (!path) return "";
-  const url = new URL(path, `${plexUrl}/`);
-  url.searchParams.set("X-Plex-Token", apiKey);
-
-  if (bypassProxy) return url.toString();
-  return context.signProxyUrl(url.toString());
+const _buildThumbnailUrl = (path) => {
+  if (!path || !THUMB_ROUTE) return "";
+  return `${THUMB_ROUTE}?path=${encodeURIComponent(path)}`;
 };
 
 const _formatDuration = (duration) => {
@@ -155,7 +153,7 @@ const _renderItem = (item, context, tml = templates.command) => {
   const isVideo = type === "movie" || type === "episode";
   const duration = isVideo ? _formatDuration(item.duration) : "";
   const thumbPath = item.thumb || item.art || "";
-  const thumbSrc = thumbPath ? _buildThumbnailUrl(thumbPath, context) : "";
+  const thumbSrc = thumbPath ? _buildThumbnailUrl(thumbPath) : "";
   const thumbnailBlock = thumbSrc
     ? `<a class="result-thumbnail-wrap ${isVideo ? "plex--thumb-video" : "plex--thumb"}" href="${_esc(_buildItemUrl(item))}">
          <img class="result-thumbnail-img" src="${_esc(thumbSrc)}" alt="" loading="lazy"
@@ -356,6 +354,10 @@ const _init = async (ctx) => {
   templates.command = ctx.template;
   templates.slot = await ctx.readFile("card.html");
   doFetch = ctx.fetch ?? fetch;
+
+  PLEX_LOGO_FILE = await ctx.readFile("plex.svg");
+  PLEX_LOGO = await ctx.routeUrl("plex.svg");
+  THUMB_ROUTE = ctx.routeUrl("thumb");
 };
 
 const _configure = (settings) => {
@@ -537,3 +539,84 @@ export const command = {
     }
   },
 };
+
+export const routes = [
+  {
+    method: "get",
+    path: "/plex.svg",
+    handler: async () => {
+      return new Response(PLEX_LOGO_FILE, {
+        headers: {
+          "Content-Type": "image/svg+xml",
+          "Cache-Control": "public, max-age=86400",
+        },
+      });
+    },
+  },
+  {
+    method: "get",
+    path: "/thumb",
+    rateLimit: false,
+    handler: async (req) => {
+      try {
+        const requestUrl = new URL(req.url);
+        const path = requestUrl.searchParams.get("path");
+        if (
+          !path ||
+          !/^\/library\/metadata\/\d+\/(?:thumb|art)(?:\/\d+)?$/.test(path)
+        ) {
+          return new Response("Invalid thumbnail path", {
+            status: 400,
+          });
+        }
+
+        if (!_isConfigured()) {
+          return new Response("Plex is not configured", {
+            status: 503,
+          });
+        }
+
+        const imageUrl = new URL(path, `${plexUrl}/`);
+        if (imageUrl.origin !== new URL(plexUrl).origin) {
+          return new Response("Invalid image URL", {
+            status: 400,
+          });
+        }
+
+        const response = await doFetch(imageUrl.toString(), {
+          headers: {
+            "X-Plex-Token": apiKey,
+            Accept: "image/*",
+          },
+          redirect: "error",
+        });
+
+        if (!response.ok) {
+          return new Response("Plex thumbnail request failed", {
+            status: response.status,
+          });
+        }
+
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.startsWith("image/")) {
+          return new Response("Plex did not return an image", {
+            status: 502,
+          });
+        }
+
+        return new Response(response.body, {
+          status: 200,
+          headers: {
+            "Content-Type": contentType,
+            "Cache-Control": "private, max-age=3600",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      } catch {
+        return new Response("Unable to load Plex thumbnail", {
+          status: 502,
+        });
+      }
+    },
+  },
+];
