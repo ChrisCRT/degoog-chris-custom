@@ -4,7 +4,7 @@ let doFetch = null;
 let plexUrl = "";
 let apiKey = "";
 let urlMode = "server";
-let bypassImageProxy = false;
+let bypassProxy = false;
 let machineId = "";
 const PER_PAGE = 25;
 
@@ -106,7 +106,7 @@ const _buildThumbnailUrl = (path, context) => {
   const url = new URL(path, `${plexUrl}/`);
   url.searchParams.set("X-Plex-Token", apiKey);
 
-  if (bypassImageProxy) return url.toString();
+  if (bypassProxy) return url.toString();
   return context.signProxyUrl(url.toString());
 };
 
@@ -331,18 +331,18 @@ export const plugin = {
         "Choose where results open: your server (URL above), Plex Web (plex.tv), or Plex Desktop (app)",
     },
     {
-      key: "bypassImageProxy",
-      label: "Bypass image proxy",
+      key: "bypassProxy",
+      label: "Bypass proxy",
       type: "toggle",
       default: "false",
       description:
-        "When enabled, images are loaded directly from plex instead of degoog's image proxy. This is helpful when using a proxy service that cant see plex, like a VPN.",
+        "When enabled, results are loaded directly from plex instead of degoog's proxy and image proxy. This is helpful when using a proxy service that cant see plex, like a VPN.",
     },
   ],
 };
 
 const _init = (ctx) => {
-  template = ctx?.template || "";
+  template = ctx.template || "";
   doFetch = ctx.fetch ?? fetch;
 };
 
@@ -350,9 +350,12 @@ const _configure = (settings) => {
   plexUrl = (settings.url || "").replace(/\/+$/, "");
   apiKey = settings.apiKey || "";
   urlMode = settings.urlMode || "server";
-  bypassImageProxy = settings.bypassImageProxy !== "false";
-  slot.isClientExposed = bypassImageProxy;
-  command.isClientExposed = bypassImageProxy;
+
+  bypassProxy = settings.bypassProxy !== "false";
+  slot.isClientExposed = bypassProxy;
+  command.isClientExposed = bypassProxy;
+  doFetch = bypassProxy ? fetch : (ctx.fetch ?? fetch);
+
   machineId = "";
 };
 
@@ -383,7 +386,7 @@ const _execute = async (query, context = {}) => {
 };
 
 export const slot = {
-  isClientExposed: bypassImageProxy,
+  isClientExposed: bypassProxy,
   name: "Plex",
   description: "Search your Plex media library",
   position: "knowledge-panel",
@@ -442,7 +445,7 @@ export const slot = {
 };
 
 export const command = {
-  isClientExposed: bypassImageProxy,
+  isClientExposed: bypassProxy,
   name: "Plex",
   description: "Search your Plex media library",
   trigger: "plex",
