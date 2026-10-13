@@ -4,20 +4,15 @@
   margin-top: 2px;
 }
 
-.plex--thumb {
-  min-block-size: 5.625rem;
-  max-block-size: 10rem;
-  block-size: auto;
-}
-
+.result-thumbnail-wrap.plex--thumb,
 .result-thumbnail-wrap.plex--thumb-video {
   position: relative;
   cursor: pointer;
   height: auto;
+}
 
-  img.result-thumbnail-img {
-    display: block;
-  }
+img.result-thumbnail-img {
+  display: block;
 }
 
 .plex--video-play {
