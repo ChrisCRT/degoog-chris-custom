@@ -10,9 +10,14 @@
   block-size: auto;
 }
 
-.plex--thumb-video {
+.result-thumbnail-wrap.plex--thumb-video {
   position: relative;
   cursor: pointer;
+  height: auto;
+
+  img.result-thumbnail-img {
+    display: block;
+  }
 }
 
 .plex--video-play {
