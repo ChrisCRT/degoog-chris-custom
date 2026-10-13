@@ -1,15 +1,18 @@
-let template = "";
+const templates = {
+  slot: "",
+  command: "",
+};
 let doFetch = null;
 
 let plexUrl = "";
 let apiKey = "";
 let urlMode = "server";
+let slotEnabled = true;
 let bypassProxy = false;
 let machineId = "";
 const PER_PAGE = 25;
 
-const PLEX_LOGO =
-  "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons@refs/heads/main/svg/plex.svg";
+const PLEX_LOGO = "./plex.svg";
 
 const _esc = (s) => {
   if (typeof s !== "string") return "";
@@ -19,10 +22,6 @@ const _esc = (s) => {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-};
-
-const _render = (data) => {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => data[key] ?? "");
 };
 
 const _searchVariants = (term) => {
@@ -133,7 +132,7 @@ const _buildEpisodeContext = (item) => {
     if (series) parts.push(series);
     if (item.parentIndex != null && item.index != null) {
       parts.push(
-        `S${String(item.parentIndex).padStart(2, "0")}E${String(item.index).padStart(2, "0")}`,
+        `Season ${String(item.parentIndex)}, Episode ${String(item.index)}`,
       );
     } else if (item.index != null) {
       parts.push(`Episode ${item.index}`);
@@ -146,7 +145,9 @@ const _buildEpisodeContext = (item) => {
   return parts.join(" - ");
 };
 
-const _renderItem = (item, context) => {
+const _capitalise = (str) => str.charAt(0).toUpperCase() + str.slice(1);
+
+const _renderItem = (item, context, tml = templates.command) => {
   const type = String(item.type || "");
   const title = String(item.title || "");
   const year = item.year ? ` (${item.year})` : "";
@@ -163,12 +164,13 @@ const _renderItem = (item, context) => {
        </a>`
     : "";
   const episodeContext = _buildEpisodeContext(item);
+  const subtitle = _esc(episodeContext);
   const subtitleBlock = episodeContext
-    ? `<div class="result-episode-context">${_esc(episodeContext)}</div>`
+    ? `<div class="result-episode-context">${subtitle}</div>`
     : "";
-  const badgesBlock = [type, "Plex"]
+  const badgesBlock = [_capitalise(type), "Plex"]
     .map((badge) => `<span class="result-engine-tag">${_esc(badge)}</span>`)
-    .join();
+    .join("");
 
   const data = {
     favicon_url: PLEX_LOGO,
@@ -177,6 +179,7 @@ const _renderItem = (item, context) => {
     title: _esc(title) + _esc(year),
     overview: _esc(summary),
     badgesBlock,
+    subtitle,
     subtitleBlock,
     thumbnailBlock,
   };
@@ -186,7 +189,7 @@ const _renderItem = (item, context) => {
   data.year = _esc(item.year || "");
   data.source = "Plex";
 
-  return _render(data);
+  return tml.replace(/\{\{(\w+)\}\}/g, (_, key) => data[key] ?? "");
 };
 
 const _deduplicateItems = (groups) => {
@@ -331,6 +334,14 @@ export const plugin = {
         "Choose where results open: your server (URL above), Plex Web (plex.tv), or Plex Desktop (app)",
     },
     {
+      key: "slotEnabled",
+      label: "Enable Slot",
+      type: "toggle",
+      default: "true",
+      description:
+        "Show a slot on search results when a result from plex is found",
+    },
+    {
       key: "bypassProxy",
       label: "Bypass proxy",
       type: "toggle",
@@ -341,8 +352,9 @@ export const plugin = {
   ],
 };
 
-const _init = (ctx) => {
-  template = ctx.template || "";
+const _init = async (ctx) => {
+  templates.command = ctx.template;
+  templates.slot = await ctx.readFile("card.html");
   doFetch = ctx.fetch ?? fetch;
 };
 
@@ -350,6 +362,7 @@ const _configure = (settings) => {
   plexUrl = (settings.url || "").replace(/\/+$/, "");
   apiKey = settings.apiKey || "";
   urlMode = settings.urlMode || "server";
+  slotEnabled = settings.slotEnabled !== "false";
 
   bypassProxy = settings.bypassProxy !== "false";
   slot.isClientExposed = bypassProxy;
@@ -397,8 +410,7 @@ export const slot = {
   configure: _configure,
 
   async trigger(query) {
-    if (!_isConfigured() || !query?.trim()) return false;
-    return true;
+    return _isConfigured() && slotEnabled && !!query?.trim();
   },
 
   async execute(query, context = {}) {
@@ -411,24 +423,27 @@ export const slot = {
       if (!term) return { title: "Plex", html: "" };
 
       const items = await _execute(term, context);
-      if (!items.length) return { title: "Plex", html: "" };
+      const filteredItems = items.filter((item) =>
+        ["movie", "show"].includes(String(item.type || "").toLowerCase()),
+      );
+      if (!filteredItems.length) return { title: "Plex", html: "" };
 
-      const slotMaxResults = 3;
-      const displayItems = items.slice(0, slotMaxResults);
+      const slotMaxResults = 2;
+      const displayItems = filteredItems.slice(0, slotMaxResults);
       const resultsHtml = displayItems
-        .map((item) => _renderItem(item, context))
+        .map((item) => _renderItem(item, context, templates.slot))
         .join("");
 
       const itemCount =
-        items.length > slotMaxResults
-          ? `${slotMaxResults} of ${items.length} results`
-          : `${items.length} result${items.length !== 1 ? "s" : ""}`;
+        filteredItems.length > slotMaxResults
+          ? `${slotMaxResults} of ${filteredItems.length} results`
+          : `${filteredItems.length} result${filteredItems.length !== 1 ? "s" : ""}`;
 
       const result = {
         title: `Plex: ${term}`,
         html: `
           <div class="plex-slot-container">
-            <div class="plex-slot-count">${itemCount}</div>
+            <div class="plex-slot-count">Plex: ${itemCount}</div>
             <div class="plex-slot-results">
               ${resultsHtml}
             </div>
@@ -500,7 +515,7 @@ export const command = {
       }
 
       const results = pageItems
-        .map((item) => _renderItem(item, context))
+        .map((item) => _renderItem(item, context, templates.command))
         .join("");
 
       const pageInfo = totalPages > 1 ? ` - Page ${page} of ${totalPages}` : "";
