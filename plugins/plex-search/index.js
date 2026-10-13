@@ -576,12 +576,12 @@ export const routes = [
           });
         }
 
-        const imageUrl = new URL(path, `${plexUrl}/`);
-        if (imageUrl.origin !== new URL(plexUrl).origin) {
-          return new Response("Invalid image URL", {
-            status: 400,
-          });
-        }
+        const imageUrl = new URL("/photo/:/transcode", new URL(plexUrl));
+        imageUrl.searchParams.set("width", "360");
+        imageUrl.searchParams.set("height", "202");
+        imageUrl.searchParams.set("minSize", "1");
+        imageUrl.searchParams.set("upscale", "1");
+        imageUrl.searchParams.set("url", path);
 
         const response = await doFetch(imageUrl.toString(), {
           headers: {
