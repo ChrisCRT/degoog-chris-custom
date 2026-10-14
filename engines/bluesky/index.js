@@ -47,7 +47,7 @@ const _parseSearch = (query, defaultSort = "latest") => {
     .replace(/\s+/g, " ")
     .trim();
 
-  return (q, sort);
+  return { q, sort };
 };
 
 export default class bskyEngine {
