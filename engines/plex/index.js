@@ -1,4 +1,10 @@
 /**
+ * Currently degoog's clean url feature removes
+ * plex's anchors from the result url,
+ * making this engine useless
+ */
+
+/**
  * @param {string} term
  * @returns {string[]}
  */

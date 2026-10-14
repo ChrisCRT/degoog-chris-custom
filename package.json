@@ -34,5 +34,18 @@
       "type": "command"
     }
   ],
-  "engines": []
+  "engines": [
+    {
+      "path": "engines/bluesky",
+      "name": "Bluesky",
+      "description": "A microblogging social media service.",
+      "version": "0.0.1"
+    },
+    {
+      "path": "engines/twitter",
+      "name": "fxEmbed (Twitter)",
+      "description": "The everything app",
+      "version": "0.0.1"
+    }
+  ]
 }

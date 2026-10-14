@@ -8,6 +8,9 @@
 .result-thumbnail-wrap.plex--thumb-video {
   position: relative;
   cursor: pointer;
+}
+
+.result-thumbnail-wrap.plex--thumb {
   height: auto;
 }
 
