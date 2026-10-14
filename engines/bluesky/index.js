@@ -76,7 +76,7 @@ export default class bskyEngine {
       if (dateTo) params.set("until", dateTo);
     }
 
-    const key = `${base}_${query}_${context?.lang ?? ""}_${context?.dateFrom ?? ""}_${context?.dateTo ?? ""}`;
+    const key = `${baseUrl}_${query}_${context?.lang ?? ""}_${context?.dateFrom ?? ""}_${context?.dateTo ?? ""}`;
     const requestedPage = Math.max(1, Number(page) || 1);
     if (requestedPage === 1) {
       cursors.delete(key);
@@ -114,8 +114,7 @@ export default class bskyEngine {
         .map((item) => _toResult(item, this.name, context))
         .filter((item) => item.url && (item.title || item.snippet));
     } catch (err) {
-      if (err?.name === "SentinelBreach") throw err;
-      return [];
+      throw err;
     }
   }
 }
