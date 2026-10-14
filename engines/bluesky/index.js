@@ -1,13 +1,14 @@
 export const type = "social media";
 
 const DEFAULT_INSTANCE = "https://api.bsky.app";
+const DEFAULT_RESULT = "https://bsky.app";
 const SEARCH_LIMIT = 25;
 const FALLBACK_UA =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36";
 
 const cursors = new Map();
 
-const _toResult = (item, sourceName, context) => {
+const _toResult = (item, sourceName, context, resultUrl = DEFAULT_RESULT) => {
   const post = item?.post ?? item;
   const record = post?.record ?? {};
   const author = post?.author ?? {};
@@ -17,7 +18,7 @@ const _toResult = (item, sourceName, context) => {
   const postId = post?.uri?.split("/").pop();
   const url =
     handle && postId
-      ? `https://bsky.app/profile/${handle}/post/${postId}`
+      ? `${resultUrl}/profile/${handle}/post/${postId}`
       : undefined;
 
   const thumb = post?.embed?.images?.[0]?.thumb ?? post?.embed?.external?.thumb;
@@ -27,7 +28,9 @@ const _toResult = (item, sourceName, context) => {
   const createdAt = record?.createdAt ?? post?.indexedAt;
 
   return {
-    title: text.slice(0, 120).replace(/\s+/g, " ").trim(),
+    title:
+      text.slice(0, 120).replace(/\s+/g, " ").trim() ||
+      `Post by ${author.displayName ?? handle}`,
     url,
     snippet: text,
     source: sourceName,
@@ -62,13 +65,26 @@ export default class bskyEngine {
       type: "url",
       placeholder: DEFAULT_INSTANCE,
       description:
-        "Custom Bluesky instance to query. Leave blank to use bsky.app",
+        "Custom Bluesky instance to query. Leave blank to use api.bsky.app",
       default: DEFAULT_INSTANCE,
+    },
+    {
+      key: "resultUrl",
+      label: "Result URL",
+      type: "url",
+      placeholder: DEFAULT_RESULT,
+      description:
+        "Bluesky instance used for results. Leave blank to use bsky.app",
+      default: DEFAULT_RESULT,
     },
   ];
 
   configure(settings) {
-    this.instanceUrl = settings.instanceUrl;
+    this.instanceUrl = (settings.instanceUrl || DEFAULT_INSTANCE).replace(
+      /\/+$/,
+      "",
+    );
+    this.resultUrl = (settings.resultUrl || DEFAULT_RESULT).replace(/\/+$/, "");
   }
 
   async executeSearch(query, page = 1, timeFilter, context) {
@@ -92,7 +108,14 @@ export default class bskyEngine {
       if (dateTo) params.set("until", dateTo);
     }
 
-    const key = `${baseUrl}_${query}_${context?.lang ?? ""}_${context?.dateFrom ?? ""}_${context?.dateTo ?? ""}`;
+    const key = [
+      baseUrl,
+      parsed.q,
+      parsed.sort,
+      context?.lang ?? "",
+      context?.dateFrom ?? "",
+      context?.dateTo ?? "",
+    ].join("_");
     const requestedPage = Math.max(1, Number(page) || 1);
     if (requestedPage === 1) {
       cursors.delete(key);
@@ -127,10 +150,11 @@ export default class bskyEngine {
       }
 
       return results
-        .map((item) => _toResult(item, this.name, context))
+        .map((item) => _toResult(item, this.name, context, this.resultUrl))
         .filter((item) => item.url && (item.title || item.snippet));
     } catch (err) {
-      throw err;
+      if (err?.name === "SentinelBreach") throw err;
+      return [];
     }
   }
 }
