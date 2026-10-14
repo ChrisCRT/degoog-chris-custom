@@ -37,6 +37,19 @@ const _toResult = (item, sourceName, context) => {
   };
 };
 
+const _parseSearch = (query, defaultSort = "latest") => {
+  let sort = defaultSort;
+  const q = query
+    .replace(/(?:^|\s)sort:(top|latest)(?=\s|$)/gi, (_, value) => {
+      sort = value.toLowerCase();
+      return " ";
+    })
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return (q, sort);
+};
+
 export default class bskyEngine {
   isClientExposed = false;
   name = "Bluesky";
@@ -61,10 +74,13 @@ export default class bskyEngine {
   async executeSearch(query, page = 1, timeFilter, context) {
     const doFetch = context?.fetch ?? fetch;
     const baseUrl = this.instanceUrl || DEFAULT_INSTANCE;
+
+    const parsed = _parseSearch(query);
+
     const params = new URLSearchParams({
-      q: query,
+      q: parsed.q,
       limit: String(SEARCH_LIMIT),
-      sort: "latest",
+      sort: parsed.sort,
     });
     const lang = context?.lang;
     if (lang) params.set("lang", lang);
