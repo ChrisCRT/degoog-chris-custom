@@ -39,7 +39,7 @@
       "path": "engines/bluesky",
       "name": "Bluesky",
       "description": "A microblogging social media service.",
-      "version": "0.0.1"
+      "version": "0.0.2"
     },
     {
       "path": "engines/twitter",
