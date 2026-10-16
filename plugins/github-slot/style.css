@@ -5,6 +5,11 @@
   padding: 0;
 }
 
+.gh-slot-result::-webkit-scrollbar {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
 .gh-slot-wrap {
   display: flex;
   flex-direction: column;
@@ -34,7 +39,6 @@
   -webkit-overflow-scrolling: touch;
   padding: 0.25rem 0;
   min-width: 0;
-  scrollbar-width: thin;
 }
 
 a.gh-slot-card {

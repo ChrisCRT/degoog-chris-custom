@@ -44,6 +44,7 @@ let apiToken = "";
 let maxRepos = 3;
 let maxUsers = 2;
 let template = "";
+let doFetch = fetch;
 
 const _cacheGet = (key) => {
   const expiresAt = cacheExpiry.get(key);
@@ -129,13 +130,13 @@ const _getHeaders = () => {
   return headers;
 };
 
-const _fetchRepo = async (owner, repo, fetchFn = fetch) => {
+const _fetchRepo = async (owner, repo) => {
   const key = `repo:${String(owner).toLowerCase()}/${String(repo).toLowerCase()}`;
   const cached = _cacheGet(key);
   if (cached != null) return cached;
   try {
     const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
-    const res = await fetchFn(url, { headers: _getHeaders() });
+    const res = await doFetch(url, { headers: _getHeaders() });
     if (!res.ok) return null;
     const data = await res.json();
     _cacheSet(key, data);
@@ -145,13 +146,13 @@ const _fetchRepo = async (owner, repo, fetchFn = fetch) => {
   }
 };
 
-const _fetchUser = async (login, fetchFn = fetch) => {
+const _fetchUser = async (login) => {
   const key = `user:${String(login).toLowerCase()}`;
   const cached = _cacheGet(key);
   if (cached != null) return cached;
   try {
     const url = `https://api.github.com/users/${encodeURIComponent(login)}`;
-    const res = await fetchFn(url, { headers: _getHeaders() });
+    const res = await doFetch(url, { headers: _getHeaders() });
     if (!res.ok) return null;
     const data = await res.json();
     _cacheSet(key, data);
@@ -209,6 +210,7 @@ export const slot = {
 
   init(ctx) {
     template = ctx.template;
+    doFetch = ctx.fetch ?? fetch;
   },
 
   configure(settings) {
@@ -224,18 +226,15 @@ export const slot = {
     return true;
   },
 
-  async execute(_query, context) {
-    const fetchFn = context?.fetch || fetch;
+  async execute(_query, context = {}) {
     const results = context?.results ?? [];
     const { repos, users } = _parseGitHubUrls(results);
     if (repos.length === 0 && users.length === 0)
       return { title: "", html: "" };
 
     const [repoData, userData] = await Promise.all([
-      Promise.all(
-        repos.map(({ owner, repo }) => _fetchRepo(owner, repo, fetchFn)),
-      ),
-      Promise.all(users.map((login) => _fetchUser(login, fetchFn))),
+      Promise.all(repos.map(({ owner, repo }) => _fetchRepo(owner, repo))),
+      Promise.all(users.map((login) => _fetchUser(login))),
     ]);
 
     const repoCards = [];
