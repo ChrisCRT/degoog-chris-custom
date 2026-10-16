@@ -134,7 +134,7 @@
   --border-color: var(--sx-chip-alt);
   --radius: unset;
 
-  border: none;
+  border: none !important;
 
   .wiki-thumb {
     border-radius: 4px;
