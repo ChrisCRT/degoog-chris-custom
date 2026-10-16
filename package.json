@@ -8,7 +8,7 @@
       "path": "themes/spaceman",
       "name": "Spaceman",
       "description": "A theme",
-      "version": "1.0.0"
+      "version": "0.0.2"
     }
   ],
   "plugins": [
@@ -23,7 +23,7 @@
       "path": "plugins/github-slot",
       "name": "Github",
       "description": "",
-      "version": "1.0.0",
+      "version": "0.0.2",
       "type": "slot"
     },
     {
