@@ -2,7 +2,7 @@ const templates = {
   slot: "",
   command: "",
 };
-let doFetch = null;
+let doFetch = fetch;
 
 let plexUrl = "";
 let apiKey = "";
@@ -70,7 +70,7 @@ const _parseEpisodeQuery = (term) => {
   return null;
 };
 
-const _fetchMachineId = async (headers, doFetch, context) => {
+const _fetchMachineId = async (headers, context) => {
   const response = await doFetch(`${plexUrl}/identity`, { headers });
   context?.sentinel?.(response, "Plex");
   if (!response.ok) {
@@ -208,7 +208,7 @@ const _deduplicateItems = (groups) => {
   return results;
 };
 
-const _findEpisode = async (episodeQuery, headers, doFetch, context) => {
+const _findEpisode = async (episodeQuery, headers, context) => {
   const seriesVariants = _searchVariants(episodeQuery.series);
   const seriesResults = await Promise.all(
     seriesVariants.map(async (variant) => {
@@ -267,7 +267,7 @@ const _findEpisode = async (episodeQuery, headers, doFetch, context) => {
   return _deduplicateItems([matchingItems]);
 };
 
-const _searchLibrary = async (term, headers, doFetch, context) => {
+const _searchLibrary = async (term, headers, context) => {
   const variants = _searchVariants(term);
 
   const responses = await Promise.all(
@@ -365,13 +365,9 @@ const _configure = (settings) => {
   apiKey = settings.apiKey || "";
   urlMode = settings.urlMode || "server";
   slotEnabled = settings.slotEnabled !== "false";
-
   bypassProxy = settings.bypassProxy !== "false";
-  slot.isClientExposed = bypassProxy;
-  command.isClientExposed = bypassProxy;
-  doFetch = bypassProxy ? fetch : (ctx.fetch ?? fetch);
-
   machineId = "";
+  doFetch = bypassProxy ? fetch : (ctx.fetch ?? fetch);
 };
 
 const _isConfigured = () => {
@@ -385,23 +381,23 @@ const _execute = async (query, context = {}) => {
     Accept: "application/json",
   };
   if (!machineId) {
-    await _fetchMachineId(headers, doFetch, context);
+    await _fetchMachineId(headers, context);
   }
 
   const episodeQuery = _parseEpisodeQuery(query);
   let items = [];
   if (episodeQuery) {
-    items = await _findEpisode(episodeQuery, headers, doFetch, context);
+    items = await _findEpisode(episodeQuery, headers, context);
   }
   if (!items.length) {
-    items = await _searchLibrary(query, headers, doFetch, context);
+    items = await _searchLibrary(query, headers, context);
   }
 
   return items;
 };
 
 export const slot = {
-  isClientExposed: bypassProxy,
+  isClientExposed: false,
   name: "Plex",
   description: "Search your Plex media library",
   position: "knowledge-panel",
@@ -462,7 +458,7 @@ export const slot = {
 };
 
 export const command = {
-  isClientExposed: bypassProxy,
+  isClientExposed: false,
   name: "Plex",
   description: "Search your Plex media library",
   trigger: "plex",

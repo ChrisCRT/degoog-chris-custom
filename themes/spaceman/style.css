@@ -131,9 +131,8 @@
   --font-medium: 0.875rem;
   --font-small: 0.6875rem;
   --link-color: var(--text-link);
-  --border-color: var(--sx-chip-alt);
   --radius: unset;
-
+  --border-color: transparent;
   border: none !important;
 
   .wiki-thumb {
