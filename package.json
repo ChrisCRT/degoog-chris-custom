@@ -8,7 +8,7 @@
       "path": "themes/spaceman",
       "name": "Spaceman",
       "description": "A theme",
-      "version": "0.0.2"
+      "version": "0.0.3"
     }
   ],
   "plugins": [
@@ -30,7 +30,7 @@
       "path": "plugins/plex-search",
       "name": "Plex",
       "description": "",
-      "version": "0.0.13",
+      "version": "0.0.14",
       "type": "command"
     }
   ],
