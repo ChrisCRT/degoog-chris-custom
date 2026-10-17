@@ -16,7 +16,11 @@ let EVAL_TIMEOUT = EVAL_TIMEOUT_DEFAULT;
 const _loadFend = async () => {
   if (!fendInitPromise) {
     fendInitPromise = (async () => {
-      await fendModule.default();
+      const wasmUrl = new URL(
+        "./fend-wasm-web/fend_wasm_bg.wasm",
+        import.meta.url,
+      );
+      await fendModule.default(wasmUrl);
       const currencyData = await fetchCurrencyRates(doFetch);
       fendModule.initialiseWithHandlers(currencyData);
       return fendModule;
