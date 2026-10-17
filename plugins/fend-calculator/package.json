@@ -2,7 +2,7 @@
   "name": "degoog-fend-calculator",
   "private": true,
   "type": "module",
-  "module": "src/index.js",
+  "module": "index.js",
   "dependencies": {
     "fend-wasm-web": "^1.5.8"
   }

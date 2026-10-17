@@ -17,14 +17,15 @@ const _loadFend = async () => {
   if (!fendInitPromise) {
     fendInitPromise = (async () => {
       if (typeof fendModule.default === "function") {
-        await fendModule.default(
-          new URL("./fend_wasm_bg.wasm", import.meta.url),
-        );
+        await fendModule.default();
       }
       const currencyData = await fetchCurrencyRates(doFetch);
       fendModule.initialiseWithHandlers(currencyData);
       return fendModule;
-    })();
+    })().catch((err) => {
+      fendInitPromise = null;
+      throw err;
+    });
   }
   return fendInitPromise;
 };
@@ -61,7 +62,9 @@ const _parseLanguage = (query) => {
     .replace(/\bdecimal\s+places?\b/gi, "dp");
 
   expr = dateCommands(expr);
+
   expr = expr.endsWith("=") ? expr.slice(0, -1).trim() : expr;
+
   return { expression: expr, raw: query };
 };
 
@@ -263,16 +266,19 @@ export const routes = [
     method: "get",
     path: "/eval",
     handler: async (req) => {
-      if (!fendEnabled) return _json({ ok: false, error: "disabled" }, 403);
-      if (req.length > MAX_EXPR_LEN) {
+      if (!fendEnabled) {
+        return _json({ ok: false, error: "disabled" }, 403);
+      }
+
+      const raw_expr = new URL(req.url).searchParams.get("expr") || "";
+      if (raw_expr.length > MAX_EXPR_LEN) {
         return _json({ ok: false, error: "too-long" }, 400);
       }
 
-      const expr = _parseLanguage(
-        new URL(req.url).searchParams.get("expr") || "",
-      );
-      if (!expr) return _json({ ok: false, error: "empty" }, 400);
-      const out = await _evaluate(expr.expression);
+      const intent = _parseLanguage(raw_expr);
+      if (!intent) return _json({ ok: false, error: "empty" }, 400);
+
+      const out = await _evaluate(intent.expression);
       return _json(out);
     },
   },
