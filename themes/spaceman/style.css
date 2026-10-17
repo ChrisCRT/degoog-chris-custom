@@ -217,35 +217,14 @@ img {
 #results-page::before,
 #main-home {
   background-image:
+    url("images/stardust.png"),
     radial-gradient(
       farthest-corner ellipse at -65% -20% in oklch,
-      transparent 0%,
-      hsl(220 10% 6% / 0%) 50%,
+      hsl(220 10% 6%) 0%,
+      hsl(220 10% 6%) 50%,
       hsl(215 45% 40%) 85%,
       hsl(19 70% 40%) 100%
-    ),
-    repeating-linear-gradient(70deg, hsl(220 10% 6% / 30%), transparent 20px),
-    url("/themes/chriscrt-degoog-chris-custom-spaceman-theme/images/stardust.png");
-  background-position:
-    0 0,
-    0px 0px,
-    0 0;
-  animation: star-twinkle 2s linear infinite;
-}
-
-@keyframes star-twinkle {
-  from {
-    background-position:
-      0 0,
-      0px 0px,
-      0 0;
-  }
-  to {
-    background-position:
-      0 0,
-      42px 0,
-      0 0;
-  }
+    );
 }
 
 .degoog-icon-btn {
