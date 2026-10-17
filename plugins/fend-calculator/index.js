@@ -119,7 +119,8 @@ const _esc = (s) => {
 };
 
 const _htmlTemplate = (values) => {
-  let html = template || FALLBACK_TEMPLATE;
+  let html =
+    template || `<div class="command-result">{{expression}} = {{result}}</div>`;
   Object.entries(values).forEach(([key, value]) => {
     html = html.split(`{{${key}}}`).join(_esc(String(value ?? "")));
   });
