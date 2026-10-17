@@ -2,11 +2,11 @@
 [data-theme="light"],
 [data-theme="dark"] {
   color-scheme: light dark;
-  --primary: hsl(19 44% 51%);
-  --primary-hover: hsl(19 46% 36%);
-  --primary-rgb: 185, 110, 75;
-  --brand-blue: hsl(19 70% 40%);
-  --brand-yellow: hsl(19 70% 40%);
+  --primary: hsl(19 64% 44%);
+  --primary-hover: hsl(19 66% 54%);
+  --primary-rgb: 184, 86, 40;
+  --brand-blue: hsl(19 64% 44%);
+  --brand-yellow: hsl(19 64% 44%);
   --danger: hsl(5 81% 56%);
   --warning: hsl(39 100% 38%);
   --success: hsl(136 53% 43%);
