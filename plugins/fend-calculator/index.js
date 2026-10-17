@@ -1,4 +1,11 @@
 import * as fendModule from "fend-wasm-web";
+console.log("[fend] exports:", Object.keys(fendModule));
+console.log("[fend] default:", typeof fendModule.default);
+console.log(
+  "[fend] initialiseWithHandlers:",
+  typeof fendModule.initialiseWithHandlers,
+);
+
 import { initCurrency, fetchCurrencyRates } from "./currency";
 import { dateCommands } from "./date";
 
@@ -24,7 +31,7 @@ const _loadFend = async () => {
       return fendModule;
     })().catch((err) => {
       fendInitPromise = null;
-      throw err;
+      console.log(err);
     });
   }
   return fendInitPromise;
