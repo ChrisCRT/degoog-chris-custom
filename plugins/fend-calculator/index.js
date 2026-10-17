@@ -20,7 +20,11 @@ const _loadFend = async () => {
       const currencyData = await fetchCurrencyRates(doFetch);
       fendModule.initialiseWithHandlers(currencyData);
       return fendModule;
-    })();
+    })().catch((err) => {
+      fendInitPromise = null;
+      console.log("[fend-calculator] init failed:", err);
+      throw err;
+    });
   }
   return fendInitPromise;
 };
