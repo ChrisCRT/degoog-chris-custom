@@ -49,3 +49,22 @@
 .fend-calc-equals {
   color: var(--text-secondary);
 }
+
+.fend-calc-footer {
+  display: flex;
+  justify-content: space-between;
+}
+
+.fend-calc-copy {
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  aspect-ratio: 1;
+  background-color: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: border-color 0.15s ease;
+}
+
+.fend-calc-copy:is(:hover, :focus) {
+  border-color: var(--primary);
+}
