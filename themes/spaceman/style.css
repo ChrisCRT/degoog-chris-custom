@@ -26,7 +26,7 @@
   --search-bar-bg-hover: light-dark(hsl(225 33% 100%), hsl(225 4% 20.5%));
   --btn-bg: light-dark(hsl(225 33% 98%), hsl(225 4% 20%));
   --btn-text: var(--text-primary);
-  --overlay-bg: light-dark(hsla(0 0% 0% / 0.4), hsla(0 0% 0% / 0.6));
+  --overlay-bg: light-dark(hsl(0 0% 0% / 0.4), hsl(0 0% 0% / 0.6));
   --white: light-dark(hsl(0 0% 100%), hsl(0 100% 98%));
 
   --sx-chip: light-dark(hsl(0 0% 100%), hsl(213 10% 18%));
@@ -41,6 +41,24 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+  font-style: italic;
+  shape-margin: 0.75rem;
 }
 
 .logo span,
@@ -258,7 +276,7 @@
 }
 
 ::selection {
-  background: hsla(19 70% 50% / 0.3);
+  background: hsl(19 70% 50% / 0.3);
 }
 
 ::-webkit-scrollbar {

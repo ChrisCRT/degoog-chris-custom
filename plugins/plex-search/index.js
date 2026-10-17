@@ -145,7 +145,7 @@ const _buildEpisodeContext = (item) => {
 
 const _capitalise = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 
-const _renderItem = (item, context, tml = templates.command) => {
+const _renderItem = (item, tml = templates.command) => {
   const type = String(item.type || "");
   const title = String(item.title || "");
   const year = item.year ? ` (${item.year})` : "";
@@ -157,7 +157,7 @@ const _renderItem = (item, context, tml = templates.command) => {
   const thumbnailBlock = thumbSrc
     ? `<a class="result-thumbnail-wrap ${isVideo ? "plex--thumb-video" : "plex--thumb"}" href="${_esc(_buildItemUrl(item))}">
          <img class="result-thumbnail-img" src="${_esc(thumbSrc)}" alt="" loading="lazy"
-           onerror="this.parentElement.style.display='none'">
+           onerror="this.parentElement.style.display='none'" width="360" height="${isVideo ? "203" : "540"}"">
          ${duration ? `<span class="plex--video-duration">${_esc(duration)}</span>` : ""}
        </a>`
     : "";
@@ -429,7 +429,7 @@ export const slot = {
       const slotMaxResults = 2;
       const displayItems = filteredItems.slice(0, slotMaxResults);
       const resultsHtml = displayItems
-        .map((item) => _renderItem(item, context, templates.slot))
+        .map((item) => _renderItem(item, templates.slot))
         .join("");
 
       const itemCount =
@@ -513,7 +513,7 @@ export const command = {
       }
 
       const results = pageItems
-        .map((item) => _renderItem(item, context, templates.command))
+        .map((item) => _renderItem(item, templates.command))
         .join("");
 
       const pageInfo = totalPages > 1 ? ` - Page ${page} of ${totalPages}` : "";
