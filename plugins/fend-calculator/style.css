@@ -65,6 +65,6 @@
   transition: border-color 0.15s ease;
 }
 
-.fend-calc-copy:is(:hover, :focus) {
-  border-color: var(--primary);
+.fend-calc-copy:is(:hover, :focus-visible) {
+  border-color: var(--border-light);
 }
