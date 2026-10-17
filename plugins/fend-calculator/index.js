@@ -1,13 +1,6 @@
-import * as fendModule from "fend-wasm-web";
-console.log("[fend] exports:", Object.keys(fendModule));
-console.log("[fend] default:", typeof fendModule.default);
-console.log(
-  "[fend] initialiseWithHandlers:",
-  typeof fendModule.initialiseWithHandlers,
-);
-
-import { initCurrency, fetchCurrencyRates } from "./currency";
-import { dateCommands } from "./date";
+import * as fendModule from "./fend-wasm-web/fend_wasm.js";
+import { initCurrency, fetchCurrencyRates } from "./currency.js";
+import { dateCommands } from "./date.js";
 
 let template = "";
 let doFetch = null;
@@ -23,16 +16,11 @@ let EVAL_TIMEOUT = EVAL_TIMEOUT_DEFAULT;
 const _loadFend = async () => {
   if (!fendInitPromise) {
     fendInitPromise = (async () => {
-      if (typeof fendModule.default === "function") {
-        await fendModule.default();
-      }
+      await fendModule.default();
       const currencyData = await fetchCurrencyRates(doFetch);
       fendModule.initialiseWithHandlers(currencyData);
       return fendModule;
-    })().catch((err) => {
-      fendInitPromise = null;
-      console.log(err);
-    });
+    })();
   }
   return fendInitPromise;
 };
