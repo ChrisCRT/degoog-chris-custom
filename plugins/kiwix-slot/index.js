@@ -1,8 +1,10 @@
 import { buildUrl } from "./request.js";
 import { parseResults } from "./parse.js";
+import { extractArticle, buildThumbnail } from "./extract.js";
 
 let template = "";
 let doFetch = fetch;
+let proxyFetch = fetch;
 let bypassProxy = false;
 let THUMB_ROUTE = "";
 let instanceUrl = "";
@@ -52,41 +54,6 @@ const _relevance = (query, title, snippet) => {
   );
 };
 
-const _extractThumbnailUrl = (html, pageUrl) => {
-  const infobox = html.match(
-    /<td\b[^>]*class=["'][^"']*\binfobox-image\b[^"']*["'][^>]*>([\s\S]*?)<\/td>/i,
-  );
-  if (!infobox) return "";
-
-  const image = infobox[1].match(
-    /<img\b(?=[^>]*\bclass=["'][^"']*\bmw-file-element\b[^"']*["'])[^>]*>/i,
-  );
-  if (!image) return "";
-
-  const src = image[0].match(/\bsrc=["']([^"']+)["']/i)?.[1];
-  if (!src) return "";
-
-  try {
-    const url = new URL(src, pageUrl);
-    if (url.origin !== new URL(instanceUrl).origin) return "";
-    if (!url.pathname.includes("/_assets_/")) return "";
-
-    return url.href;
-  } catch {
-    return "";
-  }
-};
-
-const _buildThumbnail = (html, pageUrl) => {
-  const imageUrl = _extractThumbnailUrl(html, pageUrl);
-  if (!imageUrl || !THUMB_ROUTE) return "";
-  const src = `${THUMB_ROUTE}?url=${encodeURIComponent(imageUrl)}`;
-  return `<img class="wiki-thumb"
-    src="${_esc(src)}"
-    alt=""
-    loading="lazy">`;
-};
-
 export const slot = {
   isClientExposed: false,
   id: "kiwix-slot",
@@ -125,7 +92,8 @@ export const slot = {
 
   init(ctx) {
     template = ctx.template;
-    doFetch = ctx.fetch ?? fetch;
+    proxyFetch = ctx.fetch ?? fetch;
+    doFetch = proxyFetch;
     THUMB_ROUTE = ctx.routeUrl("thumb");
   },
 
@@ -136,7 +104,7 @@ export const slot = {
     );
     bookName = (settings.bookName || "").trim();
     bypassProxy = settings.bypassProxy !== "false";
-    doFetch = bypassProxy ? fetch : (ctx.fetch ?? fetch);
+    doFetch = bypassProxy ? fetch : proxyFetch;
   },
 
   trigger() {
@@ -160,20 +128,41 @@ export const slot = {
       return { title: "", html: "" };
     }
 
-    let thumbnail = "";
-    const pageResponse = await doFetch(best.url);
-    context?.sentinel?.(pageResponse, this.name);
-    if (pageResponse.ok) {
-      const html = await pageResponse.text();
-      thumbnail = _buildThumbnail(html, best.url);
+    let article = {
+      extract: "",
+      imageUrl: "",
+      facts: [],
+    };
+
+    try {
+      const pageResponse = await doFetch(best.url);
+      context?.sentinel?.(pageResponse, this.name);
+
+      if (pageResponse.ok) {
+        const html = await pageResponse.text();
+        article = extractArticle(html, best.url, baseUrl, best.title);
+      }
+    } catch (error) {
+      context?.logger?.warn?.("Kiwix article extraction failed", error);
     }
+
+    const thumbnail = buildThumbnail(article.imageUrl, THUMB_ROUTE, _esc);
+    const extract = article.extract || "";
+    const facts = article.facts
+      .map(
+        ({ label, value }) => `<div class="wiki-fact">
+        <span class="wiki-fact-label">${_esc(label)}</span>
+        <span class="wiki-fact-value">${_esc(value)}</span>
+        </div>`,
+      )
+      .join("");
 
     const content = _render({
       thumbnail,
       url: _esc(best.url),
       title: _esc(best.title),
-      description: _esc(best.snippet.slice(0, 200)),
-      extract: _esc(best.snippet),
+      extract: _esc(extract),
+      facts,
     });
 
     return { title: "", html: content };
