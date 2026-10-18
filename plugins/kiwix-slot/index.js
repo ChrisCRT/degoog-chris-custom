@@ -3,6 +3,10 @@ import { parseResults } from "./parse.js";
 
 let template = "";
 let doFetch = fetch;
+let bypassProxy = false;
+let THUMB_ROUTE = "";
+let instanceUrl = "";
+let bookName = "";
 
 const DEFAULT_INSTANCE = "http://localhost:8080";
 const MIN_RELEVANCE = 0.6;
@@ -48,7 +52,7 @@ const _relevance = (query, title, snippet) => {
   );
 };
 
-const _buildThumbnail = (html, pageUrl) => {
+const _extractThumbnailUrl = (html, pageUrl) => {
   const infobox = html.match(
     /<td\b[^>]*class=["'][^"']*\binfobox-image\b[^"']*["'][^>]*>([\s\S]*?)<\/td>/i,
   );
@@ -63,17 +67,30 @@ const _buildThumbnail = (html, pageUrl) => {
   if (!src) return "";
 
   try {
-    const url = new URL(src, pageUrl).href;
-    return `<img class="wiki-thumb" src="${_esc(url)}" alt="" loading="lazy">`;
+    const url = new URL(src, pageUrl);
+    if (url.origin !== new URL(instanceUrl).origin) return "";
+    if (!url.pathname.includes("/_assets_/")) return "";
+
+    return url.href;
   } catch {
     return "";
   }
 };
 
+const _buildThumbnail = (html, pageUrl) => {
+  const imageUrl = _extractThumbnailUrl(html, pageUrl);
+  if (!imageUrl || !THUMB_ROUTE) return "";
+  const src = `${THUMB_ROUTE}?url=${encodeURIComponent(imageUrl)}`;
+  return `<img class="wiki-thumb"
+    src="${_esc(src)}"
+    alt=""
+    loading="lazy">`;
+};
+
 export const slot = {
   isClientExposed: false,
   id: "kiwix-slot",
-  name: "Kiwix",
+  name: "Kiwix Knowledge Panel",
   position: "knowledge-panel",
   waitForResults: true,
   description: "Shows a relevant article from your Kiwix library",
@@ -96,19 +113,30 @@ export const slot = {
         "Optional ZIM book name to search. Leave blank to search all books",
       default: "",
     },
+    {
+      key: "bypassProxy",
+      label: "Bypass proxy",
+      type: "toggle",
+      default: "false",
+      description:
+        "When enabled, requests go directly to Kiwix instead of using Degoog's outgoing proxy.",
+    },
   ],
 
   init(ctx) {
     template = ctx.template;
     doFetch = ctx.fetch ?? fetch;
+    THUMB_ROUTE = ctx.routeUrl("thumb");
   },
 
   configure(settings) {
-    this.instanceUrl = (settings.instanceUrl || DEFAULT_INSTANCE).replace(
+    instanceUrl = (settings.instanceUrl || DEFAULT_INSTANCE).replace(
       /\/+$/,
       "",
     );
-    this.bookName = (settings.bookName || "").trim();
+    bookName = (settings.bookName || "").trim();
+    bypassProxy = settings.bypassProxy !== "false";
+    doFetch = bypassProxy ? fetch : (ctx.fetch ?? fetch);
   },
 
   trigger() {
@@ -119,8 +147,8 @@ export const slot = {
     const q = typeof query === "string" ? query.trim() : "";
     if (!q) return { title: "", html: "" };
 
-    const baseUrl = this.instanceUrl || DEFAULT_INSTANCE;
-    const response = await doFetch(buildUrl(baseUrl, this.bookName, q), {
+    const baseUrl = instanceUrl || DEFAULT_INSTANCE;
+    const response = await doFetch(buildUrl(baseUrl, bookName, q), {
       headers: { Accept: "application/xml, text/xml" },
     });
     context?.sentinel?.(response, this.name);
@@ -134,6 +162,7 @@ export const slot = {
 
     let thumbnail = "";
     const pageResponse = await doFetch(best.url);
+    context?.sentinel?.(pageResponse, this.name);
     if (pageResponse.ok) {
       const html = await pageResponse.text();
       thumbnail = _buildThumbnail(html, best.url);
@@ -151,4 +180,68 @@ export const slot = {
   },
 };
 
-export default { slot };
+export const routes = [
+  {
+    method: "get",
+    path: "/thumb",
+    handler: async (req) => {
+      try {
+        const requestUrl = new URL(req.url);
+        const rawUrl = requestUrl.searchParams.get("url");
+        if (!rawUrl || !instanceUrl) {
+          return new Response("Missing image URL", { status: 400 });
+        }
+
+        let imageUrl;
+        try {
+          imageUrl = new URL(rawUrl);
+        } catch {
+          return new Response("Invalid image URL", { status: 400 });
+        }
+
+        const baseUrl = new URL(instanceUrl);
+        if (
+          imageUrl.origin !== baseUrl.origin ||
+          !imageUrl.pathname.includes("/_assets_/") ||
+          !/^https?:$/.test(imageUrl.protocol) ||
+          imageUrl.username ||
+          imageUrl.password
+        ) {
+          return new Response("Invalid thumbnail URL", { status: 400 });
+        }
+
+        const response = await doFetch(imageUrl.href, {
+          headers: { Accept: "image/*" },
+          redirect: "error",
+        });
+        if (!response.ok) {
+          return new Response("Kiwix image request failed", {
+            status: response.status,
+          });
+        }
+
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.toLowerCase().startsWith("image/")) {
+          return new Response("Kiwix did not return an image", {
+            status: 502,
+          });
+        }
+
+        return new Response(response.body, {
+          status: 200,
+          headers: {
+            "Content-Type": contentType,
+            "Cache-Control": "private, max-age=3600",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      } catch {
+        return new Response("Unable to load Kiwix thumbnail", {
+          status: 502,
+        });
+      }
+    },
+  },
+];
+
+export default { slot, routes };
