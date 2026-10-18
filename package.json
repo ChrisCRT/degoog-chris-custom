@@ -46,6 +46,12 @@
       "name": "fxEmbed (Twitter)",
       "description": "The everything app",
       "version": "0.0.1"
+    },
+    {
+      "path": "engines/kiwix",
+      "name": "Kiwix",
+      "description": "Search your local kiwix-serve instance",
+      "version": "0.0.1"
     }
   ]
 }
