@@ -149,12 +149,16 @@ export const slot = {
     const thumbnail = buildThumbnail(article.imageUrl, THUMB_ROUTE, _esc);
     const extract = article.extract || "";
     const facts = article.facts
-      .map(
-        ({ label, value }) => `<div class="wiki-fact">
+      .map(({ label, value }) => {
+        const renderedValue = url
+          ? `<a href="${_esc(url)}" target="_blank" rel="noopener noreferrer">${_esc(value)}</a>`
+          : _esc(value);
+
+        return `<div class="wiki-fact">
         <span class="wiki-fact-label">${_esc(label)}</span>
-        <span class="wiki-fact-value">${_esc(value)}</span>
-        </div>`,
-      )
+        <span class="wiki-fact-value">${renderedValue}</span>
+        </div>`;
+      })
       .join("");
 
     const content = _render({

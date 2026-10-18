@@ -31,8 +31,9 @@ const _htmlToText = (html) =>
         /<sup\b[^>]*class=["'][^"']*\breference\b[^"']*["'][^>]*>[\s\S]*?<\/sup\s*>/gi,
         " ",
       )
+      .replace(/<br\b[^>]*\/?>/gi, ", ")
       .replace(
-        /<\/?(?:br|p|div|li|ul|ol|table|tr|td|th|h[1-6]|dd|dt|section|article)\b[^>]*>/gi,
+        /<\/?(?:p|div|li|ul|ol|table|tr|td|th|h[1-6]|dd|dt|section|article)\b[^>]*>/gi,
         " ",
       )
       .replace(/<[^>]+>/g, ""),
@@ -55,6 +56,26 @@ const _getClass = (tag) =>
   _getAttribute(tag, "class").toLowerCase().split(/\s+/);
 
 const _isInfobox = (tag) => _getClass(tag).includes("infobox");
+
+const _extractLink = (html, pageUrl) => {
+  const links = html.match(/<a\b[^>]*>[\s\S]*?<\/a\s*>/gi) || [];
+  for (const link of links) {
+    const openingTag = link.match(/<a\b[^>]*>/i)?.[0] || "";
+    const href = _getAttribute(openingTag, "href");
+    if (!href) continue;
+
+    try {
+      const url = new URL(href, pageUrl);
+      if (!/^https?:$/.test(url.protocol) || url.username || url.password) {
+        continue;
+      }
+
+      return { text: _htmlToText(link), url: url.href };
+    } catch {}
+  }
+
+  return null;
+};
 
 const _findInfobox = (html) => {
   const openingTags = /<table\b[^>]*>/gi;
@@ -85,7 +106,7 @@ const _findInfobox = (html) => {
   return "";
 };
 
-const _extractInfobox = (html) => {
+const _extractInfobox = (html, pageUrl) => {
   const table = _findInfobox(html);
   if (!table) return { imageUrl: "", facts: [] };
 
@@ -141,7 +162,13 @@ const _extractInfobox = (html) => {
       continue;
     }
 
-    facts.push({ label, value });
+    const isWebsite = /^(official )?website$/i.test(label);
+    const link = isWebsite ? _extractLink(cell, pageUrl) : null;
+    facts.push({
+      label,
+      value: link?.text || value,
+      ...(link?.url ? { url: link.url } : {}),
+    });
     if (facts.length >= 12) break;
   }
 
@@ -184,7 +211,7 @@ const _extractLead = (html) => {
 };
 
 export const extractArticle = (html, pageUrl, baseUrl, title = "") => {
-  const infobox = _extractInfobox(html);
+  const infobox = _extractInfobox(html, pageUrl);
   let imageUrl = "";
   if (infobox.imageUrl) {
     try {
