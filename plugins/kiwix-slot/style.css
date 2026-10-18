@@ -1,0 +1,55 @@
+.kiwix--wiki-card {
+  --font-large: 1rem;
+  --font-medium: 0.875rem;
+  --font-small: 0.6875rem;
+  --link-color: var(--text-link);
+  --radius: unset;
+  --border-color: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--bg-light);
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  overflow: hidden;
+
+  .wiki-thumb {
+    border-radius: 4px;
+    max-width: 40%;
+    float: right;
+    margin-left: 1rem;
+    margin-bottom: 1rem;
+    background: var(--border-color);
+  }
+
+  .wiki-title {
+    display: block;
+    font-size: var(--font-large);
+    font-weight: 600;
+    color: var(--link-color);
+    text-decoration: none;
+    line-height: 1.1;
+  }
+
+  .wiki-extract {
+    font-size: var(--font-medium);
+    color: var(--text-primary);
+    display: inline;
+  }
+
+  .wiki-facts,
+  .wiki-fact {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .wiki-facts {
+    margin-block: 1em;
+    gap: 0.5em;
+  }
+
+  .wiki-fact-label {
+    font-weight: bold;
+  }
+}

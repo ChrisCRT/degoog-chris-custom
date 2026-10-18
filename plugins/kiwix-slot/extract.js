@@ -25,16 +25,21 @@ const _htmlToText = (html) =>
       .replace(/<!--[\s\S]*?-->/g, "")
       .replace(
         /<(script|style|noscript|svg|math|figure)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,
-        "",
+        " ",
       )
       .replace(
         /<sup\b[^>]*class=["'][^"']*\breference\b[^"']*["'][^>]*>[\s\S]*?<\/sup\s*>/gi,
-        "",
+        " ",
       )
-      .replace(/<[^>]+>/g, " "),
+      .replace(
+        /<\/?(?:br|p|div|li|ul|ol|table|tr|td|th|h[1-6]|dd|dt|section|article)\b[^>]*>/gi,
+        " ",
+      )
+      .replace(/<[^>]+>/g, ""),
   )
-    .replace(/\[\s*edit\s*\]/gi, "")
     .replace(/\s+/g, " ")
+    .replace(/\s+([,.;:!?%)\]])/g, "$1")
+    .replace(/([( \[])\s+/g, "$1")
     .trim();
 
 const _getAttribute = (tag, name) => {
