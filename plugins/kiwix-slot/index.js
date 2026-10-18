@@ -149,7 +149,7 @@ export const slot = {
     const thumbnail = buildThumbnail(article.imageUrl, THUMB_ROUTE, _esc);
     const extract = article.extract || "";
     const facts = article.facts
-      .map(({ label, value }) => {
+      .map(({ label, value, url }) => {
         const renderedValue = url
           ? `<a href="${_esc(url)}" target="_blank" rel="noopener noreferrer">${_esc(value)}</a>`
           : _esc(value);
