@@ -9,6 +9,7 @@ let bypassProxy = false;
 let THUMB_ROUTE = "";
 let instanceUrl = "";
 let bookName = "";
+let searchCache = null;
 
 const DEFAULT_INSTANCE = "http://localhost:8080";
 const MIN_RELEVANCE = 0.6;
@@ -95,6 +96,7 @@ export const slot = {
     proxyFetch = ctx.fetch ?? fetch;
     doFetch = proxyFetch;
     THUMB_ROUTE = ctx.routeUrl("thumb");
+    searchCache = ctx.useCache("search", 600_000);
   },
 
   configure(settings) {
@@ -116,6 +118,13 @@ export const slot = {
     if (!q) return { title: "", html: "" };
 
     const baseUrl = instanceUrl || DEFAULT_INSTANCE;
+
+    const searchKey = JSON.stringify([baseUrl, bookName, _normalise(q)]);
+    const cached = await searchCache.get(searchKey);
+    if (cached !== undefined && cached !== null) {
+      return { title: "", html: cached };
+    }
+
     const response = await doFetch(buildUrl(baseUrl, bookName, q), {
       headers: { Accept: "application/xml, text/xml" },
     });
@@ -123,8 +132,15 @@ export const slot = {
     if (!response.ok) return { title: "", html: "" };
 
     const xml = await response.text();
-    const [best] = parseResults(xml, baseUrl, this.name);
-    if (!best || _relevance(q, best.title, best.snippet) < MIN_RELEVANCE) {
+    const [best] = parseResults(xml, baseUrl, this.name)
+      .map((result) => ({
+        result,
+        score: _relevance(q, result.title, result.snippet),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    if (!best || best.score < MIN_RELEVANCE) {
+      await searchCache.set(searchKey, "");
       return { title: "", html: "" };
     }
 
@@ -135,12 +151,17 @@ export const slot = {
     };
 
     try {
-      const pageResponse = await doFetch(best.url);
+      const pageResponse = await doFetch(best.result.url);
       context?.sentinel?.(pageResponse, this.name);
 
       if (pageResponse.ok) {
         const html = await pageResponse.text();
-        article = extractArticle(html, best.url, baseUrl, best.title);
+        article = extractArticle(
+          html,
+          best.result.url,
+          baseUrl,
+          best.result.title,
+        );
       }
     } catch (error) {
       context?.logger?.warn?.("Kiwix article extraction failed", error);
@@ -163,11 +184,13 @@ export const slot = {
 
     const content = _render({
       thumbnail,
-      url: _esc(best.url),
-      title: _esc(best.title),
+      url: _esc(best.result.url),
+      title: _esc(best.result.title),
       extract: _esc(extract),
       facts,
     });
+
+    await searchCache.set(searchKey, content);
 
     return { title: "", html: content };
   },
