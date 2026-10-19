@@ -23,7 +23,7 @@
       "path": "plugins/github-slot",
       "name": "Github",
       "description": "",
-      "version": "0.0.2",
+      "version": "0.0.3",
       "type": "slot"
     },
     {

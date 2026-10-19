@@ -254,7 +254,9 @@ export const slot = {
           `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
       );
       const avatarUrl =
-        data.owner && data.owner.avatar_url ? _esc(data.owner.avatar_url) : "";
+        data.owner && data.owner.avatar_url
+          ? context.signProxyUrl(_esc(data.owner.avatar_url))
+          : "";
       const avatarHtml = avatarUrl
         ? `<img src="${avatarUrl}" alt="" class="gh-slot-avatar-img" loading="lazy">`
         : `<span class="gh-slot-avatar-placeholder">${_esc((owner || "?").charAt(0))}</span>`;
@@ -283,7 +285,9 @@ export const slot = {
       const href = _esc(
         data.html_url || `https://github.com/${encodeURIComponent(login)}`,
       );
-      const avatarUrl = data.avatar_url ? _esc(data.avatar_url) : "";
+      const avatarUrl = data.avatar_url
+        ? context.signProxyUrl(_esc(data.avatar_url))
+        : "";
       const avatarHtml = avatarUrl
         ? `<img src="${avatarUrl}" alt="" class="gh-slot-avatar-img" loading="lazy">`
         : `<span class="gh-slot-avatar-placeholder">${_esc((login || "?").charAt(0))}</span>`;

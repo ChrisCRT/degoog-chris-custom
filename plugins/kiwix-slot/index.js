@@ -57,9 +57,9 @@ const _relevance = (query, title, snippet) => {
 export const slot = {
   isClientExposed: false,
   id: "kiwix-slot",
-  name: "Kiwix Knowledge Panel",
+  name: "Kiwix",
   position: "knowledge-panel",
-  waitForResults: true,
+  waitForResults: false,
   description: "Shows a relevant article from your Kiwix library",
 
   settingsSchema: [
