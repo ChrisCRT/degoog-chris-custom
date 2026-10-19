@@ -156,12 +156,7 @@ export const slot = {
 
       if (pageResponse.ok) {
         const html = await pageResponse.text();
-        article = extractArticle(
-          html,
-          best.result.url,
-          baseUrl,
-          best.result.title,
-        );
+        article = extractArticle(html, best.result.url, baseUrl);
       }
     } catch (error) {
       context?.logger?.warn?.("Kiwix article extraction failed", error);

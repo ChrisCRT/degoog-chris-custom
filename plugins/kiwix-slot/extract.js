@@ -1,5 +1,5 @@
-const _decodeEntities = (text) =>
-  String(text || "")
+const _decodeEntities = (text) => {
+  return String(text || "")
     .replace(/&nbsp;|&#160;/gi, " ")
     .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, '"')
@@ -18,9 +18,10 @@ const _decodeEntities = (text) =>
         ? String.fromCodePoint(code)
         : _;
     });
+};
 
-const _htmlToText = (html) =>
-  _decodeEntities(
+const _htmlToText = (html) => {
+  return _decodeEntities(
     String(html || "")
       .replace(/<!--[\s\S]*?-->/g, "")
       .replace(
@@ -42,6 +43,7 @@ const _htmlToText = (html) =>
     .replace(/\s+([,.;:!?%)\]])/g, "$1")
     .replace(/([( \[])\s+/g, "$1")
     .trim();
+};
 
 const _getAttribute = (tag, name) => {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -55,21 +57,17 @@ const _getAttribute = (tag, name) => {
 const _getClass = (tag) =>
   _getAttribute(tag, "class").toLowerCase().split(/\s+/);
 
-const _isInfobox = (tag) => _getClass(tag).includes("infobox");
-
 const _extractLink = (html, pageUrl) => {
   const links = html.match(/<a\b[^>]*>[\s\S]*?<\/a\s*>/gi) || [];
   for (const link of links) {
     const openingTag = link.match(/<a\b[^>]*>/i)?.[0] || "";
     const href = _getAttribute(openingTag, "href");
     if (!href) continue;
-
     try {
       const url = new URL(href, pageUrl);
       if (!/^https?:$/.test(url.protocol) || url.username || url.password) {
         continue;
       }
-
       return { text: _htmlToText(link), url: url.href };
     } catch {}
   }
@@ -81,65 +79,64 @@ const _findInfobox = (html) => {
   const openingTags = /<table\b[^>]*>/gi;
   let match;
   while ((match = openingTags.exec(html))) {
-    if (!_isInfobox(match[0])) continue;
+    if (!_getClass(match[0]).includes("infobox")) continue;
     const start = match.index;
     let depth = 1;
     const tokens = /<\/?table\b[^>]*>/gi;
     tokens.lastIndex = openingTags.lastIndex;
-
     let token;
     while ((token = tokens.exec(html))) {
-      if (/^<table\b/i.test(token[0])) {
-        depth++;
-      } else {
-        depth--;
-      }
-
-      if (depth === 0) {
-        return html.slice(start, tokens.lastIndex);
-      }
+      if (/^<table\b/i.test(token[0])) depth++;
+      else depth--;
+      if (depth === 0) return html.slice(start, tokens.lastIndex);
     }
-
     break;
   }
 
   return "";
 };
 
-const _extractInfobox = (html, pageUrl) => {
-  const table = _findInfobox(html);
-  if (!table) return { imageUrl: "", facts: [] };
+const _extractImage = (html, pageUrl, baseUrl) => {
+  const base = new URL(baseUrl);
+  const images = html.match(/<img\b[^>]*>/gi) || [];
+  for (const img of images) {
+    const src =
+      _getAttribute(img, "src") ||
+      _getAttribute(img, "data-src") ||
+      _getAttribute(img, "data-original") ||
+      _getAttribute(img, "data-lazy-src");
+    if (!src || /^data:/i.test(src)) continue;
 
-  let imageUrl = "";
-  const imageCell = table.match(
-    /<td\b[^>]*class=["'][^"']*\binfobox-image\b[^"']*["'][^>]*>([\s\S]*?)<\/td\s*>/i,
-  )?.[1];
-  if (imageCell) {
-    const img = imageCell.match(/<img\b[^>]*>/i)?.[0];
-    if (img) {
-      imageUrl =
-        _getAttribute(img, "src") ||
-        _getAttribute(img, "data-src") ||
-        _getAttribute(img, "data-original") ||
-        _getAttribute(img, "data-lazy-src");
-    }
+    try {
+      const url = new URL(src, pageUrl);
+      if (
+        url.origin === base.origin &&
+        url.pathname.includes("/_assets_/") &&
+        /^https?:$/.test(url.protocol) &&
+        !url.username &&
+        !url.password
+      ) {
+        return url.href;
+      }
+    } catch {}
   }
 
+  return "";
+};
+
+const _extractInfoboxFacts = (html, pageUrl) => {
+  const table = _findInfobox(html);
+  if (!table) return [];
   const facts = [];
   const rows = table.match(/<tr\b[^>]*>[\s\S]*?<\/tr\s*>/gi) || [];
   for (const row of rows) {
     const openingTags = row.match(/<t[dh]\b[^>]*>/gi) || [];
-    if (
-      openingTags.some((tag) =>
-        _getClass(tag).some((name) =>
-          ["infobox-image", "infobox-above", "infobox-subheader"].includes(
-            name,
-          ),
-        ),
-      )
-    ) {
-      continue;
-    }
+    const notFacts = openingTags.some((tag) =>
+      _getClass(tag).some((name) =>
+        ["infobox-image", "infobox-above", "infobox-subheader"].includes(name),
+      ),
+    );
+    if (notFacts) continue;
 
     const header = row.match(/<th\b[^>]*>([\s\S]*?)<\/th\s*>/i)?.[1];
     const cell = row.match(/<td\b[^>]*>([\s\S]*?)<\/td\s*>/i)?.[1];
@@ -172,7 +169,7 @@ const _extractInfobox = (html, pageUrl) => {
     if (facts.length >= 12) break;
   }
 
-  return { imageUrl, facts };
+  return facts;
 };
 
 const _limitWords = (text, limit = 100) =>
@@ -210,34 +207,11 @@ const _extractLead = (html) => {
   return "";
 };
 
-export const extractArticle = (html, pageUrl, baseUrl, title = "") => {
-  const infobox = _extractInfobox(html, pageUrl);
-  let imageUrl = "";
-  if (infobox.imageUrl) {
-    try {
-      const image = new URL(infobox.imageUrl, pageUrl);
-      const base = new URL(baseUrl);
-
-      if (
-        image.origin === base.origin &&
-        image.pathname.includes("/_assets_/") &&
-        /^https?:$/.test(image.protocol) &&
-        !image.username &&
-        !image.password
-      ) {
-        imageUrl = image.href;
-      }
-    } catch {}
-  }
-
-  const lead = _extractLead(html);
-
-  return {
-    extract: lead,
-    imageUrl,
-    facts: infobox.facts,
-  };
-};
+export const extractArticle = (html, pageUrl, baseUrl) => ({
+  extract: _extractLead(html),
+  imageUrl: _extractImage(html, pageUrl, baseUrl),
+  facts: _extractInfoboxFacts(html, pageUrl),
+});
 
 export const buildThumbnail = (imageUrl, thumbRoute, escapeHtml) => {
   if (!imageUrl || !thumbRoute) return "";
