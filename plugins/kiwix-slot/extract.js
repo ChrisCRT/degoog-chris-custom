@@ -166,7 +166,7 @@ const _extractInfoboxFacts = (html, pageUrl) => {
       value: link?.text || value,
       ...(link?.url ? { url: link.url } : {}),
     });
-    if (facts.length >= 12) break;
+    if (facts.length >= 5) break;
   }
 
   return facts;
@@ -174,6 +174,11 @@ const _extractInfoboxFacts = (html, pageUrl) => {
 
 const _limitWords = (text, limit = 100) =>
   text.split(/\s+/).filter(Boolean).slice(0, limit).join(" ");
+
+const _openingSentence = (text) => {
+  const match = text.match(/^.*?[.!?]+(?=\s|$)/);
+  return match ? match[0].trim() : text.trim();
+};
 
 const _extractLead = (html) => {
   const content =
@@ -200,14 +205,20 @@ const _extractLead = (html) => {
       text.length >= 40 &&
       !/^(coordinates|this article|this page|for other uses)\b/i.test(text)
     ) {
-      return _limitWords(text, 100);
+      return _limitWords(_openingSentence(text), 100);
     }
   }
 
   return "";
 };
 
+const _extractTitle = (html) => {
+  const match = String(html || "").match(/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/i);
+  return match ? _htmlToText(match[1]) : "";
+};
+
 export const extractArticle = (html, pageUrl, baseUrl) => ({
+  title: _extractTitle(html),
   extract: _extractLead(html),
   imageUrl: _extractImage(html, pageUrl, baseUrl),
   facts: _extractInfoboxFacts(html, pageUrl),

@@ -5,7 +5,6 @@ import { dateCommands } from "./date.js";
 let template = "";
 let doFetch = null;
 
-let fendEnabled = true;
 let fendInitPromise = null;
 let evalCache = null;
 
@@ -150,12 +149,6 @@ export const plugin = {
 
   settingsSchema: [
     {
-      key: "enabled",
-      label: "Enabled",
-      type: "toggle",
-      default: "true",
-    },
-    {
       key: "evalTimeout",
       label: "Evaluation timeout (milliseconds)",
       type: "number",
@@ -174,7 +167,6 @@ const _init = (ctx) => {
 };
 
 const _configure = (settings) => {
-  fendEnabled = settings.enabled !== "false";
   const timeout = Number(settings.evalTimeout);
   EVAL_TIMEOUT =
     Number.isFinite(timeout) && timeout > 0 ? timeout : EVAL_TIMEOUT_DEFAULT;
@@ -182,18 +174,16 @@ const _configure = (settings) => {
 
 export const slot = {
   isClientExposed: false,
-  name: "Fend Calculator",
+  name: "Fend Calculator (slot)",
   description:
     "Arbitrary-precision natural-language unit-aware calculator powered by fend.",
   position: "at-a-glance",
-
-  settingsSchema: [],
 
   init: _init,
   configure: _configure,
 
   async trigger(query) {
-    if (!fendEnabled || query.length > MAX_EXPR_LEN) return false;
+    if (query.length > MAX_EXPR_LEN) return false;
     const intent = _parseLanguage(query);
     if (!intent?.expression) return false;
     const out = await _evaluate(intent.expression);
@@ -214,27 +204,16 @@ export const slot = {
 
 export const command = {
   isClientExposed: false,
-  name: "Fend Calculator",
+  name: "Fend Calculator (command)",
   description:
     "Arbitrary-precision natural-language unit-aware calculator powered by fend.",
   trigger: "fend",
   aliases: ["calc", "calculate", "math"],
 
-  settingsSchema: [],
-
   init: _init,
   configure: _configure,
 
   async execute(args) {
-    if (!fendEnabled) {
-      return {
-        title: "Fend",
-        html: `<div class="command-result">
-                  <p>Fend is disabled.</p>
-              </div>`,
-      };
-    }
-
     const intent = _parseLanguage(args);
     if (!intent?.expression) {
       return {
@@ -270,10 +249,6 @@ export const routes = [
     method: "get",
     path: "/eval",
     handler: async (req) => {
-      if (!fendEnabled) {
-        return _json({ ok: false, error: "disabled" }, 403);
-      }
-
       const raw_expr = new URL(req.url).searchParams.get("expr") || "";
       if (raw_expr.length > MAX_EXPR_LEN) {
         return _json({ ok: false, error: "too-long" }, 400);

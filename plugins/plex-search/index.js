@@ -2,13 +2,13 @@ const templates = {
   slot: "",
   command: "",
 };
+let proxyFetch = fetch;
 let doFetch = fetch;
-
+let bypassProxy = false;
 let plexUrl = "";
 let apiKey = "";
 let urlMode = "server";
 let slotEnabled = true;
-let bypassProxy = false;
 let machineId = "";
 const PER_PAGE = 25;
 
@@ -353,7 +353,8 @@ export const plugin = {
 const _init = async (ctx) => {
   templates.command = ctx.template;
   templates.slot = await ctx.readFile("card.html");
-  doFetch = ctx.fetch ?? fetch;
+  proxyFetch = ctx.fetch ?? fetch;
+  doFetch = proxyFetch;
 
   PLEX_LOGO_FILE = await ctx.readFile("plex.svg");
   PLEX_LOGO = await ctx.routeUrl("plex.svg");
@@ -367,7 +368,7 @@ const _configure = (settings) => {
   slotEnabled = settings.slotEnabled !== "false";
   bypassProxy = settings.bypassProxy !== "false";
   machineId = "";
-  doFetch = bypassProxy ? fetch : (ctx.fetch ?? fetch);
+  doFetch = bypassProxy ? fetch : proxyFetch;
 };
 
 const _isConfigured = () => {
