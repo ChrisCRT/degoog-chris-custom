@@ -14,7 +14,7 @@ const buildDdgQuery = (args) => {
   const bangIndex = trimmed.indexOf("!!");
   if (bangIndex !== -1) {
     const inner = trimmed.slice(bangIndex + 2).trimStart();
-    return inner.startsWith("!" ? inner : `!${inner}`);
+    return inner.startsWith("!") ? inner : `!${inner}`;
   }
   if (trimmed.startsWith("!")) return trimmed;
   return `!${trimmed}`;
