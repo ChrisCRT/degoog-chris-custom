@@ -39,6 +39,13 @@
       "description": "Shows a relevant article from your Kiwix library",
       "version": "0.0.9",
       "type": "slot"
+    },
+    {
+      "path": "plugins/ddg-bang",
+      "name": "DuckDuckGo bang redirect",
+      "description": "Type !! followed by any ddg bang command to trigger them directly from degoog. This WILL route through duckduckgo. Find all available commands here: https://duckduckgo.com/bangs",
+      "version": "1.2.2",
+      "type": "command"
     }
   ],
   "engines": [
