@@ -9,27 +9,19 @@ const escHtml = (s) => {
 };
 
 const buildDdgQuery = (args) => {
-  const trimmed = args.trim();
-  if (!trimmed) return "";
-  const bangIndex = trimmed.indexOf("!!");
-  if (bangIndex !== -1) {
-    const inner = trimmed.slice(bangIndex + 2).trimStart();
-    return inner.startsWith("!") ? inner : `!${inner}`;
-  }
-  if (trimmed.startsWith("!")) return trimmed;
-  return `!${trimmed}`;
+  const t = args.trim();
+  if (!t) return "";
+  return t.replace("!!", "!");
 };
 
 const redirectGoHandler = async (req) => {
   const url = new URL(req.url);
   const raw = url.searchParams.get("q") ?? "";
   const trimmed = raw.trim();
-  const bangIndex = trimmed.indexOf("!!");
-  if (bangIndex === -1) {
+  if (!trimmed.includes("!!")) {
     return new Response("Bad request", { status: 400 });
   }
-  const inner = trimmed.slice(bangIndex + 2).trimStart();
-  const ddgQ = inner.startsWith("!") ? inner : `!${inner}`;
+  const ddgQ = trimmed.replace("!!", "!");
   const dest = `${DDG_SEARCH}?q=${encodeURIComponent(ddgQ)}`;
   return Response.redirect(dest, 302);
 };
